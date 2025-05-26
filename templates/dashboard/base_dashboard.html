@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard - Sistema de Gestión de Citas{% endblock %}</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome para íconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- CSS personalizado -->
+    <style>
+        :root {
+            --primary-color: #1e88e5;
+            --secondary-color: #26a69a;
+            --accent-color: #ff5722;
+            --light-color: #f5f5f5;
+            --dark-color: #333;
+            --sidebar-width: 280px;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            overflow-x: hidden;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: var(--sidebar-width);
+            background-color: white;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            transition: all 0.3s ease;
+            overflow-y: auto;
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            background-color: var(--primary-color);
+            color: white;
+            text-align: center;
+        }
+        
+        .sidebar-header h3 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .sidebar-user {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+        }
+        
+        .sidebar-user .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-right: 15px;
+        }
+        
+        .sidebar-user .user-info {
+            flex: 1;
+        }
+        
+        .sidebar-user .user-info h5 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        
+        .sidebar-user .user-info p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: #666;
+        }
+        
+        .sidebar-menu {
+            padding: 15px 0;
+        }
+        
+        .sidebar-menu .menu-item {
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            color: #444;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border-left: 4px solid transparent;
+        }
+        
+        .sidebar-menu .menu-item:hover {
+            background-color: #f5f5f5;
+            border-left-color: var(--secondary-color);
+        }
+        
+        .sidebar-menu .menu-item.active {
+            background-color: #e3f2fd;
+            border-left-color: var(--primary-color);
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        .sidebar-menu .menu-item i {
+            margin-right: 15px;
+            font-size: 1.2rem;
+            width: 20px;
+            text-align: center;
+        }
+        
+        /* Main content */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 20px;
+            min-height: 100vh;
+            transition: all 0.3s ease;
+        }
+        
+        /* Topbar */
+        .topbar {
+            background-color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .topbar .toggle-sidebar {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #444;
+            cursor: pointer;
+            display: none;
+        }
+        
+        .topbar .page-title {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+        
+        .topbar .topbar-actions {
+            display: flex;
+            align-items: center;
+        }
+        
+        .topbar .topbar-actions .action-item {
+            margin-left: 15px;
+            position: relative;
+        }
+        
+        .topbar .topbar-actions .action-item .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: var(--accent-color);
+            color: white;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .topbar .topbar-actions .action-item .btn-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #f5f5f5;
+            color: #444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .topbar .topbar-actions .action-item .btn-icon:hover {
+            background-color: #e3f2fd;
+            color: var(--primary-color);
+        }
+        
+        /* Cards */
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+            border: none;
+        }
+        
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid #eee;
+            padding: 15px 20px;
+            font-weight: 600;
+            border-radius: 10px 10px 0 0 !important;
+        }
+        
+        .card-header .card-title {
+            margin: 0;
+            font-size: 1.1rem;
+            color: var(--dark-color);
+        }
+        
+        /* Stats cards */
+        .stats-card {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .stats-card .stats-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            margin-right: 20px;
+        }
+        
+        .stats-card .stats-info {
+            flex: 1;
+        }
+        
+        .stats-card .stats-info .stats-number {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 0;
+            line-height: 1.2;
+        }
+        
+        .stats-card .stats-info .stats-title {
+            font-size: 0.9rem;
+            color: #666;
+            margin: 0;
+        }
+        
+        /* Tables */
+        .table {
+            margin-bottom: 0;
+        }
+        
+        .table th {
+            font-weight: 600;
+            color: #444;
+            border-top: none;
+            background-color: #f9f9f9;
+        }
+        
+        .table td {
+            vertical-align: middle;
+        }
+        
+        /* Badges */
+        .badge {
+            padding: 6px 10px;
+            font-weight: 500;
+            border-radius: 6px;
+        }
+        
+        .badge-pending {
+            background-color: #ffecb3;
+            color: #ff8f00;
+        }
+        
+        .badge-confirmed {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .badge-cancelled {
+            background-color: #ffebee;
+            color: #d32f2f;
+        }
+        
+        .badge-attended {
+            background-color: #e8f5e9;
+            color: #388e3c;
+        }
+        
+        /* Responsive */
+        @media (max-width: 992px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .topbar .toggle-sidebar {
+                display: block;
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h3>Hospital Tingo María</h3>
+            <p class="mb-0">Sistema de Gestión de Citas</p>
+        </div>
+        
+        <div class="sidebar-user">
+            <div class="user-avatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="user-info">
+                <h5>{{ user.nombres }} {{ user.apellidos }}</h5>
+                <p>{{ user.rol.nombre }}</p>
+            </div>
+        </div>
+        
+        <div class="sidebar-menu">
+            {% block sidebar_menu %}
+            <!-- El menú se cargará dinámicamente según el rol del usuario -->
+            {% endblock %}
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Topbar -->
+        <div class="topbar">
+            <div class="d-flex align-items-center">
+                <button class="toggle-sidebar me-3" id="toggleSidebar">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h4 class="page-title mb-0">{% block page_title %}Dashboard{% endblock %}</h4>
+            </div>
+            
+            <div class="topbar-actions">
+                <div class="action-item">
+                    <button class="btn-icon" id="btnNotifications">
+                        <i class="fas fa-bell"></i>
+                        {% with no_leidas=user.notificaciones.filter %}{% if no_leidas %}
+                        <span class="notification-badge">{{ no_leidas.count }}</span>
+                        {% endif %}{% endwith %}
+                    </button>
+                </div>
+                
+                <div class="action-item dropdown">
+                    <button class="btn-icon" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-user-circle"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>Mi Perfil</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Configuración</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Alert Messages -->
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- Main Content Area -->
+        {% block content %}{% endblock %}
+    </div>
+    
+    <!-- jQuery (debe ir primero) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Scripts personalizados -->
+    <script>
+    // Verificar que jQuery esté cargado
+    if (typeof jQuery == 'undefined') {
+        console.error('jQuery no se cargó correctamente');
+    } else {
+        console.log('jQuery cargado correctamente:', jQuery.fn.jquery);
+    }
+        // Toggle sidebar on mobile
+        document.getElementById('toggleSidebar').addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('show');
+        });
+        
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('toggleSidebar');
+            
+            if (window.innerWidth < 992 && 
+                !sidebar.contains(event.target) && 
+                !toggleBtn.contains(event.target) && 
+                sidebar.classList.contains('show')) {
+                sidebar.classList.remove('show');
+            }
+        });
+        
+        // Cargar menú dinámico desde la API
+        function loadDynamicMenu() {
+            fetch('/api/dashboard/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.menu && data.menu.length > 0) {
+                    const sidebarMenu = document.querySelector('.sidebar-menu');
+                    sidebarMenu.innerHTML = '';
+                    
+                    // Agregar elemento Dashboard
+                    const dashboardItem = document.createElement('a');
+                    dashboardItem.href = '/dashboard/';
+                    dashboardItem.className = 'menu-item active';
+                    dashboardItem.innerHTML = '<i class="fas fa-tachometer-alt"></i> Dashboard';
+                    sidebarMenu.appendChild(dashboardItem);
+                    
+                    // Agregar elementos del menú dinámico
+                    data.menu.forEach(item => {
+                        const menuItem = document.createElement('a');
+                        menuItem.href = item.ruta;
+                        menuItem.className = 'menu-item';
+                        menuItem.innerHTML = `<i class="fas ${item.icono}"></i> ${item.nombre}`;
+                        sidebarMenu.appendChild(menuItem);
+                    });
+                    
+                    // Actualizar contador de notificaciones
+                    if (data.notificaciones_no_leidas > 0) {
+                        const badge = document.querySelector('.notification-badge');
+                        if (badge) {
+                            badge.textContent = data.notificaciones_no_leidas;
+                        } else {
+                            const btnNotifications = document.getElementById('btnNotifications');
+                            const newBadge = document.createElement('span');
+                            newBadge.className = 'notification-badge';
+                            newBadge.textContent = data.notificaciones_no_leidas;
+                            btnNotifications.appendChild(newBadge);
+                        }
+                    }
+                }
+            })
+            .catch(error => console.error('Error cargando menú dinámico:', error));
+        }
+        
+        // Cargar menú al iniciar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDynamicMenu();
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

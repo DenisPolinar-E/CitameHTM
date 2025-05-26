@@ -1,0 +1,556 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Reservar Cita - CITAME{% endblock %}
+
+{% block page_title %}Reservar Cita{% endblock %}
+
+{% block sidebar_menu %}
+<a href="/dashboard/" class="menu-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="/mis-citas/" class="menu-item"><i class="fas fa-calendar-alt"></i> Mis Citas</a>
+<a href="/citas/reservar/" class="menu-item active"><i class="fas fa-calendar-plus"></i> Reservar Cita</a>
+<a href="/historial/" class="menu-item"><i class="fas fa-file-medical-alt"></i> Historial Médico</a>
+<a href="/derivaciones/" class="menu-item"><i class="fas fa-exchange-alt"></i> Mis Derivaciones</a>
+<a href="/notificaciones/" class="menu-item"><i class="fas fa-bell"></i> Notificaciones</a>
+<a href="/perfil/" class="menu-item"><i class="fas fa-user"></i> Perfil</a>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0"><i class="fas fa-calendar-plus"></i> Reservar Cita</h4>
+        </div>
+        <div class="card-body">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" id="reservaCitaForm">
+                {% csrf_token %}
+                
+                <!-- Paso 1: Seleccionar especialidad -->
+                <div class="row mb-4" id="paso1">
+                    <div class="col-md-12">
+                        <h5 class="border-bottom pb-2">Paso 1: Seleccionar especialidad</h5>
+                        
+                        {% if especialidades %}
+                            <div class="form-group">
+                                <label for="especialidad" class="form-label">Especialidad:</label>
+                                <select name="especialidad" id="especialidad" class="form-select" required>
+                                    <option value="">Seleccione una especialidad</option>
+                                    {% for especialidad in especialidades %}
+                                        <option value="{{ especialidad.id }}" {% if especialidad_seleccionada and especialidad.id == especialidad_seleccionada.id %}selected{% endif %}>
+                                            {{ especialidad.nombre }}
+                                            {% if not especialidad.acceso_directo %}
+                                                (Requiere derivación)
+                                            {% endif %}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            {% if derivaciones_activas %}
+                                <div class="mt-3">
+                                    <p class="text-info"><i class="fas fa-info-circle"></i> Usted tiene derivaciones activas para las siguientes especialidades:</p>
+                                    <ul class="list-group">
+                                        {% for derivacion in derivaciones_activas %}
+                                            <li class="list-group-item">
+                                                {{ derivacion.especialidad_destino.nombre }} - 
+                                                Derivado por: Dr. {{ derivacion.medico_origen.usuario.nombres }} {{ derivacion.medico_origen.usuario.apellidos }} 
+                                                ({{ derivacion.fecha_derivacion|date:"d/m/Y" }})
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            {% endif %}
+                            
+                            <div class="d-flex justify-content-end mt-3">
+                                <button type="button" id="btnPaso1" class="btn btn-primary">Siguiente <i class="fas fa-arrow-right"></i></button>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i> No hay especialidades disponibles para reservar citas en este momento.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Paso 2: Seleccionar médico -->
+                <div class="row mb-4 d-none" id="paso2">
+                    <div class="col-md-12">
+                        <h5 class="border-bottom pb-2">Paso 2: Seleccionar médico</h5>
+                        
+                        <!-- Contenedor para mensajes y selector de médicos -->
+                        <div id="medicoContainer">
+                            <!-- Aquí se mostrará el mensaje de carga o error -->
+                        </div>
+                        
+                        <div class="form-group mt-3">
+                            <label for="medico" class="form-label">Médico:</label>
+                            <select name="medico" id="medico" class="form-select" required>
+                                <option value="">Seleccione un médico</option>
+                                <!-- Las opciones se cargarán dinámicamente con JavaScript -->
+                            </select>
+                        </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-3">
+                            <button type="button" id="btnVolverPaso1" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> Anterior</button>
+                            <button type="button" id="btnPaso2" class="btn btn-primary">Siguiente <i class="fas fa-arrow-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Paso 3: Seleccionar fecha y hora -->
+                <div class="row mb-4 d-none" id="paso3">
+                    <div class="col-md-12">
+                        <h5 class="border-bottom pb-2">Paso 3: Seleccionar fecha y hora</h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="fecha" class="form-label">Fecha:</label>
+                                    <input type="date" name="fecha" id="fecha" class="form-control" 
+                                           min="{{ fecha_minima }}" max="{{ fecha_maxima }}" 
+                                           value="{{ fecha_seleccionada|default:'' }}" required>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="hora" class="form-label">Hora:</label>
+                                    <select name="hora" id="hora" class="form-select" required>
+                                        <option value="">Seleccione una hora</option>
+                                        {% for hora in horarios_disponibles %}
+                                            <option value="{{ hora }}">{{ hora }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="horariosContainer">
+                            {% if horarios_disponibles %}
+                                <div class="alert alert-success">
+                                    <i class="fas fa-check-circle"></i> Hay {{ horarios_disponibles|length }} horarios disponibles para la fecha seleccionada.
+                                </div>
+                            {% elif fecha_seleccionada %}
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle"></i> No hay horarios disponibles para la fecha seleccionada. Por favor, seleccione otra fecha.
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-3">
+                            <button type="button" id="btnVolverPaso2" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> Anterior</button>
+                            <button type="button" id="btnPaso3" class="btn btn-primary">Siguiente <i class="fas fa-arrow-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Paso 4: Confirmar cita -->
+                <div class="row d-none" id="paso4">
+                    <div class="col-md-12">
+                        <h5 class="border-bottom pb-2">Paso 4: Confirmar cita</h5>
+                        
+                        <div class="form-group mb-3">
+                            <label for="motivo" class="form-label">Motivo de la consulta:</label>
+                            <textarea name="motivo" id="motivo" class="form-control" rows="3" required></textarea>
+                            <div class="form-text">Describa brevemente el motivo de su consulta (máximo 200 caracteres).</div>
+                        </div>
+                        
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">Resumen de la cita</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p><strong>Especialidad:</strong> <span id="resumenEspecialidad"></span></p>
+                                        <p><strong>Médico:</strong> <span id="resumenMedico"></span></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p><strong>Fecha:</strong> <span id="resumenFecha"></span></p>
+                                        <p><strong>Hora:</strong> <span id="resumenHora"></span></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> Por favor, recuerde llegar 15 minutos antes de su cita. Si no puede asistir, cancele con al menos 24 horas de anticipación para evitar bloqueos en el sistema.
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-3">
+                            <button type="button" id="btnVolverPaso3" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> Anterior</button>
+                            <button type="submit" class="btn btn-success"><i class="fas fa-check"></i> Confirmar Reserva</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Referencias a los pasos
+        const paso1 = document.getElementById('paso1');
+        const paso2 = document.getElementById('paso2');
+        const paso3 = document.getElementById('paso3');
+        const paso4 = document.getElementById('paso4');
+        
+        // Referencias a los botones
+        const btnPaso1 = document.getElementById('btnPaso1');
+        const btnPaso2 = document.getElementById('btnPaso2');
+        const btnPaso3 = document.getElementById('btnPaso3');
+        const btnVolverPaso1 = document.getElementById('btnVolverPaso1');
+        const btnVolverPaso2 = document.getElementById('btnVolverPaso2');
+        const btnVolverPaso3 = document.getElementById('btnVolverPaso3');
+        
+        // Referencias a los campos
+        const especialidadSelect = document.getElementById('especialidad');
+        const medicoSelect = document.getElementById('medico');
+        const fechaInput = document.getElementById('fecha');
+        const horaSelect = document.getElementById('hora');
+        
+        // Referencias a los elementos del resumen
+        const resumenEspecialidad = document.getElementById('resumenEspecialidad');
+        const resumenMedico = document.getElementById('resumenMedico');
+        const resumenFecha = document.getElementById('resumenFecha');
+        const resumenHora = document.getElementById('resumenHora');
+        
+        // Mostrar paso 2 al hacer clic en "Siguiente" en paso 1
+        btnPaso1.addEventListener('click', function() {
+            console.log('Botón Siguiente del paso 1 clickeado');
+            
+            if (especialidadSelect.value) {
+                console.log(`Especialidad seleccionada: ID=${especialidadSelect.value}, Texto=${especialidadSelect.options[especialidadSelect.selectedIndex].text}`);
+                
+                // Forzar la visibilidad del paso 2 primero
+                paso1.style.display = 'none';
+                paso2.style.display = 'block';
+                paso2.classList.remove('d-none');
+                
+                // Mostrar un mensaje de carga mientras se obtienen los médicos
+                document.getElementById('medicoContainer').innerHTML = `
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-spinner fa-spin"></i> Cargando médicos para la especialidad seleccionada...
+                    </div>
+                `;
+                
+                // Cargar los médicos para la especialidad seleccionada
+                setTimeout(function() {
+                    cargarMedicos(especialidadSelect.value);
+                }, 100);
+                
+                console.log('Avanzando al paso 2 - Selección de médico');
+            } else {
+                alert('Por favor, seleccione una especialidad');
+            }
+        });
+        
+        // Volver al paso 1 desde el paso 2
+        btnVolverPaso1.addEventListener('click', function() {
+            paso2.classList.add('d-none');
+            paso1.classList.remove('d-none');
+        });
+        
+        // Mostrar paso 3 al hacer clic en "Siguiente" en paso 2
+        btnPaso2.addEventListener('click', function() {
+            if (medicoSelect.value) {
+                paso2.classList.add('d-none');
+                paso3.classList.remove('d-none');
+            } else {
+                alert('Por favor, seleccione un médico');
+            }
+        });
+        
+        // Volver al paso 2 desde el paso 3
+        btnVolverPaso2.addEventListener('click', function() {
+            paso3.classList.add('d-none');
+            paso2.classList.remove('d-none');
+        });
+        
+        // Mostrar paso 4 al hacer clic en "Siguiente" en paso 3
+        btnPaso3.addEventListener('click', function() {
+            if (fechaInput.value && horaSelect.value) {
+                paso3.classList.add('d-none');
+                paso4.classList.remove('d-none');
+                
+                // Actualizar resumen
+                actualizarResumen();
+            } else {
+                alert('Por favor, seleccione fecha y hora');
+            }
+        });
+        
+        // Volver al paso 3 desde el paso 4
+        btnVolverPaso3.addEventListener('click', function() {
+            paso4.classList.add('d-none');
+            paso3.classList.remove('d-none');
+        });
+        
+        // Cargar médicos cuando se selecciona una especialidad
+        especialidadSelect.addEventListener('change', function() {
+            if (this.value) {
+                cargarMedicos(this.value);
+            }
+        });
+        
+        // Cargar horarios cuando se selecciona una fecha
+        fechaInput.addEventListener('change', function() {
+            if (this.value && medicoSelect.value) {
+                cargarHorarios(medicoSelect.value, this.value);
+            }
+        });
+        
+        // Función para cargar médicos
+        function cargarMedicos(especialidadId) {
+            // Limpiar mensajes previos
+            document.getElementById('medicoContainer').innerHTML = '';
+            
+            // Mostrar indicador de carga
+            medicoSelect.innerHTML = '<option value="">Cargando médicos...</option>';
+            medicoSelect.disabled = true;
+            
+            console.log(`Cargando médicos para especialidad ID: ${especialidadId}`);
+            
+            // Mostrar mensaje de depuración
+            document.getElementById('medicoContainer').innerHTML = `
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-spinner fa-spin"></i> Consultando médicos para la especialidad ID: ${especialidadId}...
+                </div>
+            `;
+            
+            // Agregar timestamp para evitar caché
+            const timestamp = new Date().getTime();
+            const url = `/api/medicos-por-especialidad/${especialidadId}/?_=${timestamp}`;
+            
+            console.log(`URL con timestamp anti-caché: ${url}`);
+            
+            // Realizar la solicitud con fetch y parámetros para evitar caché
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                },
+                credentials: 'same-origin',
+                cache: 'no-store'
+            })
+                .then(response => {
+                    console.log('Respuesta recibida:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`Error HTTP: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Datos recibidos:', data);
+                    
+                    // Mostrar la respuesta completa para depuración
+                    console.log('Respuesta completa de la API:', JSON.stringify(data, null, 2));
+                    
+                    if (data.success) {
+                        // Mostrar información de la especialidad
+                        if (data.especialidad) {
+                            console.log(`Especialidad: ${data.especialidad.nombre} (ID: ${data.especialidad.id})`);
+                        }
+                        
+                        if (data.medicos && data.medicos.length > 0) {
+                            console.log(`Se encontraron ${data.medicos.length} médicos`);
+                            
+                            // Habilitar el selector
+                            medicoSelect.disabled = false;
+                            
+                            // Limpiar select antes de agregar nuevas opciones
+                            medicoSelect.innerHTML = '';
+                            
+                            // Agregar opción por defecto
+                            const defaultOption = document.createElement('option');
+                            defaultOption.value = '';
+                            defaultOption.textContent = 'Seleccione un médico';
+                            medicoSelect.appendChild(defaultOption);
+                            
+                            // Agregar cada médico como una opción
+                            data.medicos.forEach((medico, index) => {
+                                console.log(`Médico ${index + 1}:`, medico);
+                                
+                                if (medico && medico.id && medico.nombres && medico.apellidos) {
+                                    const option = document.createElement('option');
+                                    option.value = medico.id;
+                                    option.textContent = `Dr. ${medico.nombres} ${medico.apellidos}`;
+                                    medicoSelect.appendChild(option);
+                                    console.log(`Agregado médico ${medico.id} al select:`, option);
+                                } else {
+                                    console.warn('Médico con datos incompletos:', medico);
+                                }
+                            });
+                            
+                            // Verificar que se hayan agregado opciones
+                            console.log(`Opciones en el select después de agregar: ${medicoSelect.options.length}`);
+                            
+                            // Mostrar mensaje de éxito
+                            document.getElementById('medicoContainer').innerHTML = `
+                                <div class="alert alert-success mt-3">
+                                    <i class="fas fa-check-circle"></i> Se encontraron ${data.medicos.length} médicos disponibles para esta especialidad.
+                                </div>
+                            `;
+                            
+                            // Hacer visible el selector de médicos
+                            document.querySelector('.form-group.mt-3').style.display = 'block';
+                        } else {
+                            console.log('No se encontraron médicos para esta especialidad');
+                            medicoSelect.innerHTML = '<option value="">No hay médicos disponibles para esta especialidad</option>';
+                            medicoSelect.disabled = true;
+                            
+                            document.getElementById('medicoContainer').innerHTML = `
+                                <div class="alert alert-warning mt-3">
+                                    <i class="fas fa-exclamation-triangle"></i> No hay médicos disponibles para esta especialidad en este momento.
+                                </div>
+                            `;
+                        }
+                        
+                        // Limpiar horarios
+                        horaSelect.innerHTML = '<option value="">Seleccione una hora</option>';
+                        document.getElementById('horariosContainer').innerHTML = '';
+                    } else {
+                        console.error('Error en la respuesta:', data.error);
+                        medicoSelect.innerHTML = '<option value="">Error al cargar médicos</option>';
+                        document.getElementById('medicoContainer').innerHTML = `
+                            <div class="alert alert-danger mt-3">
+                                <i class="fas fa-exclamation-circle"></i> Error al cargar médicos: ${data.error || 'Error desconocido'}
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error en la petición:', error);
+                    medicoSelect.disabled = false;
+                    medicoSelect.innerHTML = '<option value="">Error al cargar médicos</option>';
+                    document.getElementById('medicoContainer').innerHTML = `
+                        <div class="alert alert-danger mt-3">
+                            <i class="fas fa-exclamation-circle"></i> Error al cargar médicos. Por favor, intente nuevamente.
+                            <br>Detalles del error: ${error.message || 'Error desconocido'}
+                        </div>
+                    `;
+                });
+        }
+        
+        // Función para cargar horarios disponibles
+        function cargarHorarios(medicoId, fecha) {
+            // Mostrar indicador de carga
+            horaSelect.innerHTML = '<option value="">Cargando horarios...</option>';
+            horaSelect.disabled = true;
+            document.getElementById('horariosContainer').innerHTML = `
+                <div class="d-flex justify-content-center mt-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                </div>
+            `;
+            
+            fetch(`/api/horarios-disponibles/${medicoId}/${fecha}/`)
+                .then(response => response.json())
+                .then(data => {
+                    horaSelect.disabled = false;
+                    
+                    if (data.success) {
+                        if (data.horarios && data.horarios.length > 0) {
+                            let options = '<option value="">Seleccione una hora</option>';
+                            data.horarios.forEach(hora => {
+                                options += `<option value="${hora}">${hora}</option>`;
+                            });
+                            horaSelect.innerHTML = options;
+                            
+                            // Mostrar mensaje de disponibilidad
+                            document.getElementById('horariosContainer').innerHTML = `
+                                <div class="alert alert-success mt-3">
+                                    <i class="fas fa-check-circle"></i> Hay ${data.horarios.length} horarios disponibles para la fecha seleccionada.
+                                </div>
+                            `;
+                        } else {
+                            horaSelect.innerHTML = '<option value="">No hay horarios disponibles</option>';
+                            document.getElementById('horariosContainer').innerHTML = `
+                                <div class="alert alert-warning mt-3">
+                                    <i class="fas fa-exclamation-triangle"></i> No hay horarios disponibles para la fecha seleccionada. Por favor, seleccione otra fecha.
+                                </div>
+                            `;
+                        }
+                    } else {
+                        horaSelect.innerHTML = '<option value="">Error al cargar horarios</option>';
+                        document.getElementById('horariosContainer').innerHTML = `
+                            <div class="alert alert-danger mt-3">
+                                <i class="fas fa-exclamation-circle"></i> Error al cargar horarios: ${data.error || 'Error desconocido'}
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    horaSelect.disabled = false;
+                    horaSelect.innerHTML = '<option value="">Error al cargar horarios</option>';
+                    console.error('Error:', error);
+                    document.getElementById('horariosContainer').innerHTML = `
+                        <div class="alert alert-danger mt-3">
+                            <i class="fas fa-exclamation-circle"></i> Error al cargar horarios. Por favor, intente nuevamente.
+                        </div>
+                    `;
+                });
+        }
+        
+        // Función para actualizar el resumen
+        function actualizarResumen() {
+            const especialidadText = especialidadSelect.options[especialidadSelect.selectedIndex].text;
+            const medicoText = medicoSelect.options[medicoSelect.selectedIndex].text;
+            
+            // Formatear fecha para mostrar
+            const fechaObj = new Date(fechaInput.value);
+            const fechaFormateada = fechaObj.toLocaleDateString('es-ES', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+            
+            resumenEspecialidad.textContent = especialidadText;
+            resumenMedico.textContent = medicoText;
+            resumenFecha.textContent = fechaFormateada;
+            resumenHora.textContent = horaSelect.value;
+        }
+        
+        // Inicializar el estado según los valores seleccionados
+        if (especialidadSelect.value) {
+            if (medicoSelect.value) {
+                if (fechaInput.value && horaSelect.value) {
+                    // Si todos los campos están llenos, mostrar el paso 4
+                    paso1.classList.add('d-none');
+                    paso2.classList.add('d-none');
+                    paso3.classList.add('d-none');
+                    paso4.classList.remove('d-none');
+                    actualizarResumen();
+                } else {
+                    // Si falta fecha u hora, mostrar el paso 3
+                    paso1.classList.add('d-none');
+                    paso2.classList.add('d-none');
+                    paso3.classList.remove('d-none');
+                }
+            } else {
+                // Si falta médico, mostrar el paso 2
+                paso1.classList.add('d-none');
+                paso2.classList.remove('d-none');
+            }
+        }
+    });
+</script>
+{% endblock %}

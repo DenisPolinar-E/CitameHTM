@@ -1,0 +1,349 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Gestión de Disponibilidad - CITAME{% endblock %}
+
+{% block page_title %}Gestión de Disponibilidad{% endblock %}
+
+{% block sidebar_menu %}
+<a href="/dashboard/" class="menu-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="/mis-citas/" class="menu-item"><i class="fas fa-calendar-alt"></i> Mis Citas</a>
+<a href="/disponibilidad/" class="menu-item active"><i class="fas fa-clock"></i> Gestionar Disponibilidad</a>
+<a href="/pacientes/" class="menu-item"><i class="fas fa-user-injured"></i> Mis Pacientes</a>
+<a href="/notificaciones/" class="menu-item"><i class="fas fa-bell"></i> Notificaciones</a>
+<a href="/perfil/" class="menu-item"><i class="fas fa-user-md"></i> Perfil</a>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <!-- Columna izquierda: Formulario para agregar disponibilidad -->
+        <div class="col-lg-5">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-plus-circle"></i> Agregar Disponibilidad</h5>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <form method="post" id="disponibilidadForm">
+                        {% csrf_token %}
+                        
+                        <!-- Tipo de disponibilidad -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Tipo de disponibilidad:</label>
+                            <div class="mt-2">
+                                {% for radio in form.tipo_disponibilidad %}
+                                    <div class="form-check">
+                                        {{ radio.tag }}
+                                        <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                            {{ radio.choice_label }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% if form.tipo_disponibilidad.errors %}
+                                <div class="text-danger">{{ form.tipo_disponibilidad.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Día de la semana (para disponibilidad regular) -->
+                        <div class="mb-3" id="diaSemanaContainer">
+                            <label for="{{ form.dia_semana.id_for_label }}" class="form-label fw-bold">Día de la semana:</label>
+                            {{ form.dia_semana }}
+                            {% if form.dia_semana.errors %}
+                                <div class="text-danger">{{ form.dia_semana.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Fecha específica (para disponibilidad especial) -->
+                        <div class="mb-3 d-none" id="fechaEspecialContainer">
+                            <label for="{{ form.fecha_especial.id_for_label }}" class="form-label fw-bold">Fecha específica:</label>
+                            {{ form.fecha_especial }}
+                            {% if form.fecha_especial.errors %}
+                                <div class="text-danger">{{ form.fecha_especial.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Horario -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.hora_inicio.id_for_label }}" class="form-label fw-bold">Hora de inicio:</label>
+                                {{ form.hora_inicio }}
+                                {% if form.hora_inicio.errors %}
+                                    <div class="text-danger">{{ form.hora_inicio.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.hora_fin.id_for_label }}" class="form-label fw-bold">Hora de fin:</label>
+                                {{ form.hora_fin }}
+                                {% if form.hora_fin.errors %}
+                                    <div class="text-danger">{{ form.hora_fin.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Tipo de turno -->
+                        <div class="mb-4">
+                            <label for="{{ form.tipo_turno.id_for_label }}" class="form-label fw-bold">Tipo de turno:</label>
+                            {{ form.tipo_turno }}
+                            {% if form.tipo_turno.errors %}
+                                <div class="text-danger">{{ form.tipo_turno.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Guardar Disponibilidad
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Columna derecha: Disponibilidades actuales -->
+        <div class="col-lg-7">
+            <!-- Disponibilidades regulares -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-calendar-week"></i> Disponibilidad Regular</h5>
+                    <span class="badge bg-light text-dark">{{ disponibilidades_regulares.count }} horarios</span>
+                </div>
+                <div class="card-body">
+                    {% if disponibilidades_regulares %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Día</th>
+                                        <th>Horario</th>
+                                        <th>Turno</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for disponibilidad in disponibilidades_regulares %}
+                                        <tr>
+                                            <td>
+                                                <span class="fw-bold">
+                                                    {% for id, nombre in dias_semana %}
+                                                        {% if id == disponibilidad.dia_semana %}
+                                                            {{ nombre }}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </span>
+                                            </td>
+                                            <td>{{ disponibilidad.hora_inicio|time:"H:i" }} - {{ disponibilidad.hora_fin|time:"H:i" }}</td>
+                                            <td>
+                                                {% if disponibilidad.tipo_turno == 'manana' %}
+                                                    <span class="badge bg-info">Mañana</span>
+                                                {% elif disponibilidad.tipo_turno == 'tarde' %}
+                                                    <span class="badge bg-warning">Tarde</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Noche</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm" role="group">
+                                                    <a href="{% url 'editar_disponibilidad' disponibilidad.id %}" class="btn btn-outline-primary" title="Editar">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <a href="{% url 'desactivar_disponibilidad' disponibilidad.id %}" class="btn btn-outline-danger" title="Desactivar" onclick="return confirm('¿Está seguro de desactivar este horario?');">
+                                                        <i class="fas fa-times"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> No tiene horarios regulares configurados.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Disponibilidades especiales -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-calendar-day"></i> Disponibilidad Especial</h5>
+                    <span class="badge bg-light text-dark">{{ disponibilidades_especiales.count }} horarios</span>
+                </div>
+                <div class="card-body">
+                    {% if disponibilidades_especiales %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Horario</th>
+                                        <th>Turno</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for disponibilidad in disponibilidades_especiales %}
+                                        <tr>
+                                            <td>
+                                                <span class="fw-bold">{{ disponibilidad.fecha_especial|date:"d/m/Y" }}</span>
+                                            </td>
+                                            <td>{{ disponibilidad.hora_inicio|time:"H:i" }} - {{ disponibilidad.hora_fin|time:"H:i" }}</td>
+                                            <td>
+                                                {% if disponibilidad.tipo_turno == 'manana' %}
+                                                    <span class="badge bg-info">Mañana</span>
+                                                {% elif disponibilidad.tipo_turno == 'tarde' %}
+                                                    <span class="badge bg-warning">Tarde</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Noche</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm" role="group">
+                                                    <a href="{% url 'editar_disponibilidad' disponibilidad.id %}" class="btn btn-outline-primary" title="Editar">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <a href="{% url 'desactivar_disponibilidad' disponibilidad.id %}" class="btn btn-outline-danger" title="Desactivar" onclick="return confirm('¿Está seguro de desactivar este horario?');">
+                                                        <i class="fas fa-times"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> No tiene horarios especiales configurados.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Disponibilidades inactivas -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Disponibilidades Inactivas</h5>
+                    <span class="badge bg-light text-dark">{{ disponibilidades_inactivas.count }} horarios</span>
+                </div>
+                <div class="card-body">
+                    {% if disponibilidades_inactivas %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Día/Fecha</th>
+                                        <th>Horario</th>
+                                        <th>Turno</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for disponibilidad in disponibilidades_inactivas %}
+                                        <tr class="table-secondary">
+                                            <td>
+                                                {% if disponibilidad.fecha_especial %}
+                                                    <span>{{ disponibilidad.fecha_especial|date:"d/m/Y" }}</span>
+                                                {% else %}
+                                                    <span>
+                                                        {% for id, nombre in dias_semana %}
+                                                            {% if id == disponibilidad.dia_semana %}
+                                                                {{ nombre }}
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ disponibilidad.hora_inicio|time:"H:i" }} - {{ disponibilidad.hora_fin|time:"H:i" }}</td>
+                                            <td>
+                                                {% if disponibilidad.tipo_turno == 'manana' %}
+                                                    <span class="badge bg-info">Mañana</span>
+                                                {% elif disponibilidad.tipo_turno == 'tarde' %}
+                                                    <span class="badge bg-warning">Tarde</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Noche</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm" role="group">
+                                                    <a href="{% url 'activar_disponibilidad' disponibilidad.id %}" class="btn btn-outline-success" title="Activar" onclick="return confirm('¿Está seguro de activar este horario?');">
+                                                        <i class="fas fa-check"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> No tiene horarios inactivos.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para visualizar calendario -->
+<div class="modal fade" id="calendarModal" tabindex="-1" aria-labelledby="calendarModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="calendarModalLabel"><i class="fas fa-calendar-alt"></i> Calendario de Disponibilidad</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="calendar"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Manejar la visibilidad de los campos según el tipo de disponibilidad
+        const tipoDisponibilidadRadios = document.querySelectorAll('input[name="tipo_disponibilidad"]');
+        const diaSemanaContainer = document.getElementById('diaSemanaContainer');
+        const fechaEspecialContainer = document.getElementById('fechaEspecialContainer');
+        
+        function actualizarVisibilidadCampos() {
+            const tipoSeleccionado = document.querySelector('input[name="tipo_disponibilidad"]:checked').value;
+            
+            if (tipoSeleccionado === 'regular') {
+                diaSemanaContainer.classList.remove('d-none');
+                fechaEspecialContainer.classList.add('d-none');
+            } else {
+                diaSemanaContainer.classList.add('d-none');
+                fechaEspecialContainer.classList.remove('d-none');
+            }
+        }
+        
+        // Inicializar visibilidad
+        actualizarVisibilidadCampos();
+        
+        // Actualizar visibilidad cuando cambia la selección
+        tipoDisponibilidadRadios.forEach(radio => {
+            radio.addEventListener('change', actualizarVisibilidadCampos);
+        });
+    });
+</script>
+{% endblock %}

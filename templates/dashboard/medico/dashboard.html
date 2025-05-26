@@ -1,0 +1,250 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block title %}Dashboard Médico - Sistema de Gestión de Citas{% endblock %}
+
+{% block page_title %}Dashboard Médico{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Stats Row -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="stats-card">
+                <div class="stats-icon" style="background-color: #e3f2fd; color: #1976d2;">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="stats-info">
+                    <h3 class="stats-number">{{ citas_hoy.count }}</h3>
+                    <p class="stats-title">Citas Hoy</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="stats-card">
+                <div class="stats-icon" style="background-color: #e8f5e9; color: #388e3c;">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <div class="stats-info">
+                    <h3 class="stats-number">{{ proximas_citas.count }}</h3>
+                    <p class="stats-title">Próximas Citas</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="stats-card">
+                <div class="stats-icon" style="background-color: #fff3e0; color: #e65100;">
+                    <i class="fas fa-exchange-alt"></i>
+                </div>
+                <div class="stats-info">
+                    <h3 class="stats-number">{{ derivaciones.count }}</h3>
+                    <p class="stats-title">Derivaciones Realizadas</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Citas del Día -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title"><i class="fas fa-calendar-day me-2"></i>Citas del Día</h5>
+                    <a href="/agenda/" class="btn btn-sm btn-primary">Ver Agenda Completa</a>
+                </div>
+                <div class="card-body">
+                    {% if citas_hoy %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Hora</th>
+                                    <th>Paciente</th>
+                                    <th>DNI</th>
+                                    <th>Consultorio</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cita in citas_hoy %}
+                                <tr>
+                                    <td>{{ cita.hora_inicio|time:"H:i" }} - {{ cita.hora_fin|time:"H:i" }}</td>
+                                    <td>{{ cita.paciente.usuario.nombres }} {{ cita.paciente.usuario.apellidos }}</td>
+                                    <td>{{ cita.paciente.usuario.dni }}</td>
+                                    <td>{{ cita.consultorio.codigo }}</td>
+                                    <td>
+                                        {% if cita.estado == 'pendiente' %}
+                                        <span class="badge badge-pending">Pendiente</span>
+                                        {% elif cita.estado == 'confirmada' %}
+                                        <span class="badge badge-confirmed">Confirmada</span>
+                                        {% elif cita.estado == 'cancelada' %}
+                                        <span class="badge badge-cancelled">Cancelada</span>
+                                        {% elif cita.estado == 'atendida' %}
+                                        <span class="badge badge-attended">Atendida</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="/atencion/{{ cita.id }}/" class="btn btn-sm btn-primary me-1" title="Atender">
+                                            <i class="fas fa-stethoscope"></i>
+                                        </a>
+                                        <a href="#" class="btn btn-sm btn-outline-secondary me-1" title="Ver Historial">
+                                            <i class="fas fa-file-medical"></i>
+                                        </a>
+                                        <a href="#" class="btn btn-sm btn-outline-warning" title="Reprogramar">
+                                            <i class="fas fa-calendar-plus"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>No tienes citas programadas para hoy.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Próximas Citas y Derivaciones -->
+    <div class="row">
+        <!-- Próximas Citas -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title"><i class="fas fa-calendar-alt me-2"></i>Próximas Citas</h5>
+                    <a href="/agenda/" class="btn btn-sm btn-primary">Ver Todas</a>
+                </div>
+                <div class="card-body">
+                    {% if proximas_citas %}
+                    <div class="list-group">
+                        {% for cita in proximas_citas %}
+                        <div class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ cita.paciente.usuario.nombres }} {{ cita.paciente.usuario.apellidos }}</h6>
+                                <small>{{ cita.fecha|date:"d/m/Y" }}</small>
+                            </div>
+                            <p class="mb-1">
+                                <strong>Hora:</strong> {{ cita.hora_inicio|time:"H:i" }} - {{ cita.hora_fin|time:"H:i" }} |
+                                <strong>Consultorio:</strong> {{ cita.consultorio.codigo }}
+                            </p>
+                            <p class="mb-1"><strong>Motivo:</strong> {{ cita.motivo|truncatechars:100 }}</p>
+                            <small class="text-muted">
+                                {% if cita.estado == 'pendiente' %}
+                                <span class="badge badge-pending">Pendiente</span>
+                                {% elif cita.estado == 'confirmada' %}
+                                <span class="badge badge-confirmed">Confirmada</span>
+                                {% endif %}
+                            </small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>No tienes citas programadas próximamente.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Derivaciones Recientes -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title"><i class="fas fa-exchange-alt me-2"></i>Derivaciones Recientes</h5>
+                    <a href="/derivaciones/" class="btn btn-sm btn-primary">Ver Todas</a>
+                </div>
+                <div class="card-body">
+                    {% if derivaciones %}
+                    <div class="list-group">
+                        {% for derivacion in derivaciones %}
+                        <div class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ derivacion.paciente.usuario.nombres }} {{ derivacion.paciente.usuario.apellidos }}</h6>
+                                <small>{{ derivacion.fecha_derivacion|date:"d/m/Y" }}</small>
+                            </div>
+                            <p class="mb-1"><strong>Especialidad:</strong> {{ derivacion.especialidad_destino.nombre }}</p>
+                            <p class="mb-1"><strong>Motivo:</strong> {{ derivacion.motivo|truncatechars:100 }}</p>
+                            <small class="text-muted">
+                                {% if derivacion.estado == 'pendiente' %}
+                                <span class="badge badge-pending">Pendiente</span>
+                                {% elif derivacion.estado == 'usada' %}
+                                <span class="badge badge-confirmed">Usada</span>
+                                {% elif derivacion.estado == 'vencida' %}
+                                <span class="badge badge-cancelled">Vencida</span>
+                                {% endif %}
+                            </small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>No has realizado derivaciones recientemente.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notificaciones -->
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title"><i class="fas fa-bell me-2"></i>Notificaciones Recientes</h5>
+                    <a href="/notificaciones/" class="btn btn-sm btn-primary">Ver Todas</a>
+                </div>
+                <div class="card-body">
+                    {% if notificaciones %}
+                    <div class="list-group">
+                        {% for notificacion in notificaciones %}
+                        <div id="notificacion-{{ notificacion.id }}" class="list-group-item list-group-item-action {% if notificacion.importante %}list-group-item-warning{% endif %}">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">
+                                    {% if notificacion.tipo == 'confirmacion' %}
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    {% elif notificacion.tipo == 'recordatorio' %}
+                                    <i class="fas fa-clock text-primary me-2"></i>
+                                    {% elif notificacion.tipo == 'cancelacion' %}
+                                    <i class="fas fa-times-circle text-danger me-2"></i>
+                                    {% elif notificacion.tipo == 'advertencia' %}
+                                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                                    {% else %}
+                                    <i class="fas fa-info-circle text-info me-2"></i>
+                                    {% endif %}
+                                    {{ notificacion.tipo|title }}
+                                </h6>
+                                <small>{{ notificacion.fecha_envio|date:"d/m/Y H:i" }}</small>
+                            </div>
+                            <p class="mb-1">{{ notificacion.mensaje }}</p>
+                            <div class="d-flex justify-content-end mt-2">
+                                <button class="btn btn-sm btn-outline-secondary btn-marcar-leida" data-notificacion-id="{{ notificacion.id }}">
+                                    <i class="fas fa-check me-1"></i>Marcar como leída
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>No tienes notificaciones sin leer.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% load static %}
+<script src="{% static 'js/dashboard.js' %}"></script>
+{% endblock %}

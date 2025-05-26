@@ -1,0 +1,278 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Derivar a Especialista - Hospital Tingo María{% endblock %}
+
+{% block content %}
+    <!-- Contenido principal -->
+    <div class="container-fluid">
+        <div class="content-header">
+            <h2><i class="fas fa-exchange-alt me-2"></i>Derivar a Especialista</h2>
+        </div>
+            
+        <div class="row">
+            <!-- Datos del paciente -->
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-user me-2"></i>Datos del Paciente</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="patient-info">
+                            <h4>{{ cita.paciente.usuario.nombres }} {{ cita.paciente.usuario.apellidos }}</h4>
+                            <p><strong>DNI:</strong> {{ cita.paciente.usuario.dni }}</p>
+                            <p><strong>Edad:</strong> 
+                                {% if cita.paciente.usuario.fecha_nacimiento %}
+                                    {{ cita.paciente.usuario.fecha_nacimiento|timesince }}
+                                {% else %}
+                                    No registrada
+                                {% endif %}
+                            </p>
+                            <p><strong>Teléfono:</strong> {{ cita.paciente.usuario.telefono|default:"No registrado" }}</p>
+                            <p><strong>Dirección:</strong> {{ cita.paciente.usuario.direccion|default:"No registrada" }}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-calendar-check me-2"></i>Datos de la Cita</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Fecha:</strong> {{ cita.fecha|date:"d/m/Y" }}</p>
+                        <p><strong>Hora:</strong> {{ cita.hora_inicio|time:"H:i" }} - {{ cita.hora_fin|time:"H:i" }}</p>
+                        <p><strong>Consultorio:</strong> {{ cita.consultorio.codigo }}</p>
+                        <p><strong>Motivo:</strong> {{ cita.motivo }}</p>
+                        <p><strong>Estado:</strong> <span class="badge bg-{{ cita.estado }}">{{ cita.get_estado_display }}</span></p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Formulario de derivación -->
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>Formulario de Derivación</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="{% url 'derivar_paciente' cita.id %}" id="derivacionForm">
+                            {% csrf_token %}
+                            <input type="hidden" name="accion" value="derivar">
+                            
+                            <div class="mb-3">
+                                <label for="especialidad" class="form-label">Especialidad</label>
+                                <select class="form-select" id="especialidad" name="especialidad" required>
+                                    <option value="">Seleccione una especialidad</option>
+                                    {% for especialidad in especialidades %}
+                                        <option value="{{ especialidad.id }}">{{ especialidad.nombre }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="motivo_derivacion" class="form-label">Motivo de derivación</label>
+                                <textarea class="form-control" id="motivo_derivacion" name="motivo_derivacion" rows="4" required></textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="vigencia_dias" class="form-label">Vigencia (días)</label>
+                                <input type="number" class="form-control" id="vigencia_dias" name="vigencia_dias" value="30" min="1" max="90">
+                                <div class="form-text">Número de días en que esta derivación será válida para agendar una cita.</div>
+                            </div>
+                        
+                            <!-- Sección de agendamiento de cita -->
+                            <h4 class="mt-4">Agendar Cita con Especialista</h4>
+                            <div id="seccion-agendamiento" class="card mt-2 mb-3 border-success" style="display: block;">
+                                <div class="card-header bg-success text-white">
+                                    <h5 class="mb-0"><i class="fas fa-calendar-check me-2"></i>Agendar Cita con Especialista</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label for="medico_especialista" class="form-label">Médico Especialista</label>
+                                        <select class="form-select" id="medico_especialista" name="medico_especialista">
+                                            <option value="">Seleccione una especialidad primero</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="fecha_cita" class="form-label">Fecha de Cita</label>
+                                        <input type="date" class="form-control" id="fecha_cita" name="fecha_cita">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="horario_cita" class="form-label">Horario Disponible</label>
+                                        <select class="form-select" id="horario_cita" name="horario_cita">
+                                            <option value="">Seleccione médico y fecha primero</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="consultorio" class="form-label">Consultorio</label>
+                                        <input type="text" class="form-control" id="consultorio" name="consultorio" readonly>
+                                    </div>
+                                    
+                                    <div class="form-text text-muted">
+                                        <strong>Nota:</strong> El agendamiento de cita es opcional. Si no se agenda ahora, el paciente deberá hacerlo posteriormente.
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="fas fa-exchange-alt me-1"></i> Derivar y Agendar Cita
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- JavaScript directo para depuración -->
+    <script>
+    // Ejecutar inmediatamente
+    alert('Script directo ejecutándose');
+    
+    // Esperar a que el documento esté listo
+    document.addEventListener('DOMContentLoaded', function() {
+        alert('DOM está listo');
+        
+        // Obtener el selector de especialidades
+        var especialidadSelect = document.getElementById('especialidad');
+        console.log('Selector de especialidad encontrado:', especialidadSelect);
+        
+        if (especialidadSelect) {
+            // Agregar listener de evento manualmente
+            especialidadSelect.addEventListener('change', function() {
+                var valor = this.value;
+                alert('CAMBIO DETECTADO: ' + valor);
+                
+                // Mostrar sección de agendamiento
+                document.getElementById('seccion-agendamiento').style.display = 'block';
+                
+                // Preparar para llamada AJAX
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', '/api/medicos-por-especialidad/' + valor + '/', true);
+                
+                xhr.onload = function() {
+                    if (xhr.status >= 200 && xhr.status < 400) {
+                        // Éxito
+                        alert('Respuesta recibida: ' + xhr.responseText);
+                        var data = JSON.parse(xhr.responseText);
+                        
+                        var medicoSelect = document.getElementById('medico_especialista');
+                        var options = '<option value="">Seleccione un médico</option>';
+                        
+                        if (data && data.length > 0) {
+                            for (var i = 0; i < data.length; i++) {
+                                options += '<option value="' + data[i].id + '">' + 
+                                         data[i].nombres + ' ' + data[i].apellidos + '</option>';
+                            }
+                        } else {
+                            options = '<option value="">No hay médicos disponibles</option>';
+                        }
+                        
+                        medicoSelect.innerHTML = options;
+                    } else {
+                        // Error
+                        alert('Error en la solicitud: ' + xhr.status);
+                    }
+                };
+                
+                xhr.onerror = function() {
+                    alert('Error de conexión');
+                };
+                
+                xhr.send();
+            });
+            
+            // Agregar listener de evento con trigger manual para probar
+            alert('Añadiendo evento click para probar');
+            especialidadSelect.addEventListener('click', function() {
+                alert('Clic en selector de especialidad');
+            });
+        } else {
+            alert('ERROR: No se encontró el selector de especialidades');
+        }
+    });
+    </script>
+{% endblock %}
+
+{% block extra_js %}
+{% load static %}
+<!-- Cargando directamente jQuery para asegurar que esté disponible -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Código JavaScript directamente en la plantilla para depuración -->
+<script>
+$(document).ready(function() {
+    // Alerta inicial para verificar que jQuery funciona
+    alert('Plantilla derivar_paciente.html - jQuery versión: ' + $.fn.jquery);
+    
+    // Configurar fecha mínima como hoy
+    var today = new Date();
+    var dd = String(today.getDate()).padStart(2, '0');
+    var mm = String(today.getMonth() + 1).padStart(2, '0');
+    var yyyy = today.getFullYear();
+    today = yyyy + '-' + mm + '-' + dd;
+    $('#fecha_cita').attr('min', today);
+    
+    // Mostrar siempre la sección de agendamiento para pruebas
+    $('#seccion-agendamiento').show();
+    console.log('Sección de agendamiento visible');
+    
+    // Evento de cambio para el selector de especialidades
+    $('#especialidad').on('change', function() {
+        var especialidadId = $(this).val();
+        alert('Especialidad seleccionada: ' + especialidadId);
+        console.log('Especialidad seleccionada:', especialidadId);
+        
+        if (especialidadId) {
+            // Mostrar sección de agendamiento
+            $('#seccion-agendamiento').show();
+            
+            // Preparar selector de médicos
+            $('#medico_especialista').html('<option value="">Cargando médicos...</option>').prop('disabled', true);
+            
+            // Cargar médicos para esta especialidad
+            $.ajax({
+                url: '/api/derivacion/medicos-por-especialidad/' + especialidadId + '/',
+                type: 'GET',
+                dataType: 'json',
+                success: function(data) {
+                    console.log('API respuesta exitosa:', data);
+                    alert('Médicos encontrados: ' + (data ? data.length : 0));
+                    
+                    var options = '<option value="">Seleccione un médico</option>';
+                    
+                    if (data && data.length > 0) {
+                        for (var i = 0; i < data.length; i++) {
+                            var medico = data[i];
+                            options += '<option value="' + medico.id + '">' + 
+                                     medico.nombres + ' ' + medico.apellidos + ' - CMP: ' + 
+                                     (medico.cmp || 'N/A') + '</option>';
+                        }
+                    } else {
+                        options = '<option value="">No hay médicos disponibles</option>';
+                    }
+                    
+                    $('#medico_especialista').html(options).prop('disabled', false);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error API:', status, error);
+                    console.error('Respuesta:', xhr.responseText);
+                    alert('Error: ' + error + ' - Status: ' + status);
+                    
+                    $('#medico_especialista')
+                        .html('<option value="">Error al cargar médicos</option>')
+                        .prop('disabled', false);
+                }
+            });
+        } else {
+            $('#medico_especialista').html('<option value="">Seleccione una especialidad primero</option>');
+        }
+    });
+});
+</script>
+{% endblock %}

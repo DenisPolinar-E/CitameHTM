@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+
+{% block title %}Bienvenido - Sistema de Gestión de Citas{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Hero Section -->
+    <div class="row align-items-center mb-5">
+        <div class="col-lg-6">
+            <h1 class="display-4 fw-bold text-primary mb-3">Sistema de Gestión de Citas</h1>
+            <h2 class="h3 mb-4">Hospital de Tingo María</h2>
+            <p class="lead mb-4">
+                Plataforma integral para la gestión de citas médicas, historiales clínicos y seguimiento de pacientes. Diseñado para mejorar la experiencia de atención en el Hospital de Tingo María.
+            </p>
+            <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                <a href="{% url 'login' %}" class="btn btn-primary btn-lg px-4 me-md-2">
+                    <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
+                </a>
+                <a href="{% url 'registro' %}" class="btn btn-outline-secondary btn-lg px-4">
+                    <i class="fas fa-user-plus me-2"></i>Registrarse
+                </a>
+            </div>
+        </div>
+        <div class="col-lg-6 mt-5 mt-lg-0">
+            <img src="https://img.freepik.com/free-vector/doctor-examining-patient-clinic-illustrated_23-2148856559.jpg" alt="Atención médica" class="img-fluid rounded shadow-lg">
+        </div>
+    </div>
+    
+    <!-- Features Section -->
+    <div class="row my-5">
+        <div class="col-12 text-center mb-4">
+            <h2 class="h2 fw-bold">Servicios Disponibles</h2>
+            <p class="lead">Conoce las ventajas de nuestro sistema de gestión de citas</p>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-calendar-check text-primary" style="font-size: 3rem;"></i>
+                    </div>
+                    <h3 class="h5 card-title">Reserva de Citas</h3>
+                    <p class="card-text">Agenda tus citas médicas de forma rápida y sencilla, eligiendo especialidad, médico y horario disponible.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-file-medical-alt text-primary" style="font-size: 3rem;"></i>
+                    </div>
+                    <h3 class="h5 card-title">Historial Médico</h3>
+                    <p class="card-text">Accede a tu historial médico completo, con diagnósticos, tratamientos y seguimiento de tus consultas anteriores.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-bell text-primary" style="font-size: 3rem;"></i>
+                    </div>
+                    <h3 class="h5 card-title">Notificaciones</h3>
+                    <p class="card-text">Recibe recordatorios de tus próximas citas, resultados disponibles y comunicaciones importantes del hospital.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Specialties Section -->
+    <div class="row my-5">
+        <div class="col-12 text-center mb-4">
+            <h2 class="h2 fw-bold">Especialidades Médicas</h2>
+            <p class="lead">Contamos con profesionales en diversas áreas de la salud</p>
+        </div>
+        
+        <div class="col-md-3 col-sm-6 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-3">
+                    <i class="fas fa-heartbeat text-danger mb-3" style="font-size: 2rem;"></i>
+                    <h4 class="h6">Cardiología</h4>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-sm-6 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-3">
+                    <i class="fas fa-brain text-info mb-3" style="font-size: 2rem;"></i>
+                    <h4 class="h6">Neurología</h4>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-sm-6 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-3">
+                    <i class="fas fa-bone text-warning mb-3" style="font-size: 2rem;"></i>
+                    <h4 class="h6">Traumatología</h4>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-sm-6 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-3">
+                    <i class="fas fa-tooth text-primary mb-3" style="font-size: 2rem;"></i>
+                    <h4 class="h6">Odontología</h4>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-sm-6 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-3">
+                    <i class="fas fa-eye text-success mb-3" style="font-size: 2rem;"></i>
+                    <h4 class="h6">Oftalmología</h4>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-sm-6 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-3">
+                    <i class="fas fa-child text-danger mb-3" style="font-size: 2rem;"></i>
+                    <h4 class="h6">Pediatría</h4>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-sm-6 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-3">
+                    <i class="fas fa-venus text-pink mb-3" style="font-size: 2rem;"></i>
+                    <h4 class="h6">Ginecología</h4>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-sm-6 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center p-3">
+                    <i class="fas fa-stethoscope text-secondary mb-3" style="font-size: 2rem;"></i>
+                    <h4 class="h6">Medicina General</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Call to Action -->
+    <div class="row my-5">
+        <div class="col-12">
+            <div class="bg-primary text-white p-5 rounded-3 shadow">
+                <div class="row align-items-center">
+                    <div class="col-lg-8">
+                        <h2 class="fw-bold">¿Listo para mejorar tu experiencia médica?</h2>
+                        <p class="lead mb-0">Regístrate ahora y comienza a gestionar tus citas médicas de manera eficiente.</p>
+                    </div>
+                    <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                        <a href="{% url 'registro' %}" class="btn btn-light btn-lg px-4">
+                            <i class="fas fa-user-plus me-2"></i>Crear Cuenta
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

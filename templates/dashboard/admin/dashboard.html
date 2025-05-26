@@ -1,0 +1,278 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load custom_filters %}
+
+{% block title %}Dashboard Administrador - Sistema de Gestión de Citas{% endblock %}
+
+{% block page_title %}Dashboard Administrador{% endblock %}
+
+{% block extra_css %}
+<style>
+    .custom-progress {
+        width: 100%;
+        background-color: #e9ecef;
+        border-radius: 0.25rem;
+        height: 0.5rem;
+        overflow: hidden;
+    }
+    .custom-progress-bar {
+        height: 100%;
+        background-color: #1976d2;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Stats Row -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stats-card">
+                <div class="stats-icon" style="background-color: #e3f2fd; color: #1976d2;">
+                    <i class="fas fa-user-injured"></i>
+                </div>
+                <div class="stats-info">
+                    <h3 class="stats-number">{{ total_pacientes }}</h3>
+                    <p class="stats-title">Pacientes Registrados</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stats-card">
+                <div class="stats-icon" style="background-color: #e8f5e9; color: #388e3c;">
+                    <i class="fas fa-user-md"></i>
+                </div>
+                <div class="stats-info">
+                    <h3 class="stats-number">{{ total_medicos }}</h3>
+                    <p class="stats-title">Médicos Activos</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stats-card">
+                <div class="stats-icon" style="background-color: #fff3e0; color: #e65100;">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="stats-info">
+                    <h3 class="stats-number">{{ total_citas }}</h3>
+                    <p class="stats-title">Total de Citas</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stats-card">
+                <div class="stats-icon" style="background-color: #f3e5f5; color: #7b1fa2;">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
+                <div class="stats-info">
+                    <h3 class="stats-number">{{ citas_atendidas }}</h3>
+                    <p class="stats-title">Citas Atendidas</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Gráficos de Estadísticas -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title"><i class="fas fa-chart-pie me-2"></i>Citas por Especialidad</h5>
+                    <a href="/reportes/especialidades/" class="btn btn-sm btn-primary">Ver Detalle</a>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="position: relative; height:300px;">
+                        <canvas id="especialidadesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title"><i class="fas fa-chart-bar me-2"></i>Estado de Citas</h5>
+                    <a href="/reportes/estadisticas/" class="btn btn-sm btn-primary">Ver Detalle</a>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="position: relative; height:300px;">
+                        <canvas id="estadoCitasChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Citas por Especialidad -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title"><i class="fas fa-list-alt me-2"></i>Citas por Especialidad</h5>
+                    <a href="/reportes/especialidades/" class="btn btn-sm btn-primary">Ver Completo</a>
+                </div>
+                <div class="card-body">
+                    {% if citas_por_especialidad %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Especialidad</th>
+                                    <th>Total Citas</th>
+                                    <th>Porcentaje</th>
+                                    <th>Distribución</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in citas_por_especialidad %}
+                                <tr>
+                                    <td>{{ item.medico__especialidad__nombre }}</td>
+                                    <td>{{ item.total }}</td>
+                                    <td>{{ item.total|divisor:total_citas|multiply:100|floatformat:1 }}%</td>
+                                    <td>
+                                        {% with porcentaje=item.total|divisor:total_citas|multiply:100|floatformat:1 %}
+                                        <div class="custom-progress" title="{{ porcentaje|default:'0' }}%">
+                                            <div class="custom-progress-bar" data-width="{{ porcentaje|default:'0' }}"></div>
+                                        </div>
+                                        {% endwith %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>No hay datos disponibles sobre citas por especialidad.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Usuarios y Notificaciones -->
+    <div class="row">
+        <!-- Usuarios Recientes -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title"><i class="fas fa-users me-2"></i>Usuarios Recientes</h5>
+                    <a href="/usuarios/" class="btn btn-sm btn-primary">Ver Todos</a>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for usuario in usuarios_recientes %}
+                        <div class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ usuario.nombres }} {{ usuario.apellidos }}</h6>
+                                <small>{{ usuario.date_joined|date:"d/m/Y" }}</small>
+                            </div>
+                            <p class="mb-1">
+                                <strong>DNI:</strong> {{ usuario.dni }} | 
+                                <strong>Rol:</strong> {{ usuario.rol.nombre }}
+                            </p>
+                            <small class="text-muted">
+                                <i class="fas fa-envelope me-1"></i>{{ usuario.email }}
+                            </small>
+                        </div>
+                        {% empty %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>No hay usuarios registrados recientemente.
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Notificaciones -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title"><i class="fas fa-bell me-2"></i>Notificaciones Recientes</h5>
+                    <a href="/notificaciones/" class="btn btn-sm btn-primary">Ver Todas</a>
+                </div>
+                <div class="card-body">
+                    {% if notificaciones %}
+                    <div class="list-group">
+                        {% for notificacion in notificaciones %}
+                        <div id="notificacion-{{ notificacion.id }}" class="list-group-item list-group-item-action {% if notificacion.importante %}list-group-item-warning{% endif %}">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">
+                                    {% if notificacion.tipo == 'confirmacion' %}
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    {% elif notificacion.tipo == 'recordatorio' %}
+                                    <i class="fas fa-clock text-primary me-2"></i>
+                                    {% elif notificacion.tipo == 'cancelacion' %}
+                                    <i class="fas fa-times-circle text-danger me-2"></i>
+                                    {% elif notificacion.tipo == 'advertencia' %}
+                                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                                    {% else %}
+                                    <i class="fas fa-info-circle text-info me-2"></i>
+                                    {% endif %}
+                                    {{ notificacion.tipo|title }}
+                                </h6>
+                                <small>{{ notificacion.fecha_envio|date:"d/m/Y H:i" }}</small>
+                            </div>
+                            <p class="mb-1">{{ notificacion.mensaje }}</p>
+                            <div class="d-flex justify-content-end mt-2">
+                                <button class="btn btn-sm btn-outline-secondary btn-marcar-leida" data-notificacion-id="{{ notificacion.id }}">
+                                    <i class="fas fa-check me-1"></i>Marcar como leída
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>No tienes notificaciones sin leer.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% load static %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Datos para los gráficos en formato JSON -->
+<script id="especialidadesLabels" type="application/json">
+    [
+        {% for item in citas_por_especialidad %}
+        "{{ item.medico__especialidad__nombre }}"{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ]
+</script>
+<script id="especialidadesData" type="application/json">
+    [
+        {% for item in citas_por_especialidad %}
+        {{ item.total }}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ]
+</script>
+<script id="asistenciaLabels" type="application/json">
+    ["Asistieron", "No asistieron", "Pendientes"]
+</script>
+<script id="asistenciaData" type="application/json">
+    [{{ asistencia.asistieron }}, {{ asistencia.no_asistieron }}, {{ asistencia.pendientes }}]
+</script>
+<!-- Inicializar las barras de progreso -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Establecer el ancho de las barras de progreso
+        document.querySelectorAll('.custom-progress-bar').forEach(function(bar) {
+            const width = bar.getAttribute('data-width');
+            bar.style.width = width + '%';
+        });
+    });
+</script>
+
+<!-- Incluir el archivo JavaScript externo -->
+<script src="{% static 'js/dashboard.js' %}"></script>
+{% endblock %}

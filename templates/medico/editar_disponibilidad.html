@@ -1,0 +1,165 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Editar Disponibilidad - CITAME{% endblock %}
+
+{% block page_title %}Editar Disponibilidad{% endblock %}
+
+{% block sidebar_menu %}
+<a href="/dashboard/" class="menu-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="/mis-citas/" class="menu-item"><i class="fas fa-calendar-alt"></i> Mis Citas</a>
+<a href="/disponibilidad/" class="menu-item active"><i class="fas fa-clock"></i> Gestionar Disponibilidad</a>
+<a href="/pacientes/" class="menu-item"><i class="fas fa-user-injured"></i> Mis Pacientes</a>
+<a href="/notificaciones/" class="menu-item"><i class="fas fa-bell"></i> Notificaciones</a>
+<a href="/perfil/" class="menu-item"><i class="fas fa-user-md"></i> Perfil</a>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-edit"></i> Editar Disponibilidad</h5>
+                    <a href="{% url 'disponibilidad_medica' %}" class="btn btn-sm btn-light">
+                        <i class="fas fa-arrow-left"></i> Volver
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-info-circle"></i> Está editando la disponibilidad:
+                        <strong>
+                            {% if disponibilidad.fecha_especial %}
+                                {{ disponibilidad.fecha_especial|date:"d/m/Y" }}
+                            {% else %}
+                                {% for id, nombre in dias_semana %}
+                                    {% if id == disponibilidad.dia_semana %}
+                                        {{ nombre }}
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                        </strong>
+                        de {{ disponibilidad.hora_inicio|time:"H:i" }} a {{ disponibilidad.hora_fin|time:"H:i" }}
+                    </div>
+                    
+                    <form method="post" id="editarDisponibilidadForm">
+                        {% csrf_token %}
+                        
+                        <!-- Tipo de disponibilidad -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Tipo de disponibilidad:</label>
+                            <div class="mt-2">
+                                {% for radio in form.tipo_disponibilidad %}
+                                    <div class="form-check">
+                                        {{ radio.tag }}
+                                        <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                            {{ radio.choice_label }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% if form.tipo_disponibilidad.errors %}
+                                <div class="text-danger">{{ form.tipo_disponibilidad.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Día de la semana (para disponibilidad regular) -->
+                        <div class="mb-3" id="diaSemanaContainer">
+                            <label for="{{ form.dia_semana.id_for_label }}" class="form-label fw-bold">Día de la semana:</label>
+                            {{ form.dia_semana }}
+                            {% if form.dia_semana.errors %}
+                                <div class="text-danger">{{ form.dia_semana.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Fecha específica (para disponibilidad especial) -->
+                        <div class="mb-3 d-none" id="fechaEspecialContainer">
+                            <label for="{{ form.fecha_especial.id_for_label }}" class="form-label fw-bold">Fecha específica:</label>
+                            {{ form.fecha_especial }}
+                            {% if form.fecha_especial.errors %}
+                                <div class="text-danger">{{ form.fecha_especial.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Horario -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.hora_inicio.id_for_label }}" class="form-label fw-bold">Hora de inicio:</label>
+                                {{ form.hora_inicio }}
+                                {% if form.hora_inicio.errors %}
+                                    <div class="text-danger">{{ form.hora_inicio.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.hora_fin.id_for_label }}" class="form-label fw-bold">Hora de fin:</label>
+                                {{ form.hora_fin }}
+                                {% if form.hora_fin.errors %}
+                                    <div class="text-danger">{{ form.hora_fin.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Tipo de turno -->
+                        <div class="mb-4">
+                            <label for="{{ form.tipo_turno.id_for_label }}" class="form-label fw-bold">Tipo de turno:</label>
+                            {{ form.tipo_turno }}
+                            {% if form.tipo_turno.errors %}
+                                <div class="text-danger">{{ form.tipo_turno.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'disponibilidad_medica' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Guardar Cambios
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Manejar la visibilidad de los campos según el tipo de disponibilidad
+        const tipoDisponibilidadRadios = document.querySelectorAll('input[name="tipo_disponibilidad"]');
+        const diaSemanaContainer = document.getElementById('diaSemanaContainer');
+        const fechaEspecialContainer = document.getElementById('fechaEspecialContainer');
+        
+        function actualizarVisibilidadCampos() {
+            const tipoSeleccionado = document.querySelector('input[name="tipo_disponibilidad"]:checked').value;
+            
+            if (tipoSeleccionado === 'regular') {
+                diaSemanaContainer.classList.remove('d-none');
+                fechaEspecialContainer.classList.add('d-none');
+            } else {
+                diaSemanaContainer.classList.add('d-none');
+                fechaEspecialContainer.classList.remove('d-none');
+            }
+        }
+        
+        // Inicializar visibilidad
+        actualizarVisibilidadCampos();
+        
+        // Actualizar visibilidad cuando cambia la selección
+        tipoDisponibilidadRadios.forEach(radio => {
+            radio.addEventListener('change', actualizarVisibilidadCampos);
+        });
+    });
+</script>
+{% endblock %}

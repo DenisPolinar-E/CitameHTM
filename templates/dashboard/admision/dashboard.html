@@ -1,0 +1,247 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block title %}Dashboard Admisión - Sistema de Gestión de Citas{% endblock %}
+
+{% block page_title %}Dashboard Admisión{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Acciones Rápidas -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title"><i class="fas fa-bolt me-2"></i>Acciones Rápidas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <a href="/citas/crear/" class="btn btn-primary w-100 py-3">
+                                <i class="fas fa-calendar-plus mb-2 d-block" style="font-size: 2rem;"></i>
+                                Registrar Cita
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <a href="/buscar-paciente/" class="btn btn-info w-100 py-3 text-white">
+                                <i class="fas fa-search mb-2 d-block" style="font-size: 2rem;"></i>
+                                Buscar Paciente
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <a href="/disponibilidad/" class="btn btn-success w-100 py-3">
+                                <i class="fas fa-calendar-check mb-2 d-block" style="font-size: 2rem;"></i>
+                                Ver Disponibilidad
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <a href="/inasistencias/" class="btn btn-warning w-100 py-3">
+                                <i class="fas fa-exclamation-triangle mb-2 d-block" style="font-size: 2rem;"></i>
+                                Justificar Inasistencia
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Citas del Día -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title"><i class="fas fa-calendar-day me-2"></i>Citas del Día</h5>
+                    <div>
+                        <a href="#" class="btn btn-sm btn-outline-primary me-2">
+                            <i class="fas fa-print me-1"></i>Imprimir
+                        </a>
+                        <a href="/citas/" class="btn btn-sm btn-primary">
+                            <i class="fas fa-list me-1"></i>Ver Todas
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if citas_hoy %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Hora</th>
+                                    <th>Paciente</th>
+                                    <th>DNI</th>
+                                    <th>Médico</th>
+                                    <th>Especialidad</th>
+                                    <th>Consultorio</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cita in citas_hoy %}
+                                <tr>
+                                    <td>{{ cita.hora_inicio|time:"H:i" }}</td>
+                                    <td>{{ cita.paciente.usuario.nombres }} {{ cita.paciente.usuario.apellidos }}</td>
+                                    <td>{{ cita.paciente.usuario.dni }}</td>
+                                    <td>Dr. {{ cita.medico.usuario.nombres }} {{ cita.medico.usuario.apellidos }}</td>
+                                    <td>{{ cita.medico.especialidad.nombre }}</td>
+                                    <td>{{ cita.consultorio.codigo }}</td>
+                                    <td>
+                                        {% if cita.estado == 'pendiente' %}
+                                        <span class="badge badge-pending">Pendiente</span>
+                                        {% elif cita.estado == 'confirmada' %}
+                                        <span class="badge badge-confirmed">Confirmada</span>
+                                        {% elif cita.estado == 'cancelada' %}
+                                        <span class="badge badge-cancelled">Cancelada</span>
+                                        {% elif cita.estado == 'atendida' %}
+                                        <span class="badge badge-attended">Atendida</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton{{ cita.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                                Acciones
+                                            </button>
+                                            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton{{ cita.id }}">
+                                                <li><a class="dropdown-item" href="/citas/{{ cita.id }}/"><i class="fas fa-eye me-2"></i>Ver Detalles</a></li>
+                                                <li><a class="dropdown-item" href="/citas/{{ cita.id }}/editar/"><i class="fas fa-edit me-2"></i>Editar</a></li>
+                                                <li><a class="dropdown-item" href="/citas/{{ cita.id }}/confirmar/"><i class="fas fa-check-circle me-2"></i>Confirmar</a></li>
+                                                <li><a class="dropdown-item" href="/citas/{{ cita.id }}/cancelar/"><i class="fas fa-times-circle me-2"></i>Cancelar</a></li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li><a class="dropdown-item" href="/citas/{{ cita.id }}/registrar-asistencia/"><i class="fas fa-clipboard-check me-2"></i>Registrar Asistencia</a></li>
+                                            </ul>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>No hay citas programadas para hoy.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pacientes con Faltas y Notificaciones -->
+    <div class="row">
+        <!-- Pacientes con Faltas -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title"><i class="fas fa-exclamation-circle me-2"></i>Pacientes con Faltas</h5>
+                    <a href="/inasistencias/" class="btn btn-sm btn-primary">Ver Todos</a>
+                </div>
+                <div class="card-body">
+                    {% if pacientes_faltas %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Paciente</th>
+                                    <th>DNI</th>
+                                    <th>Faltas</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for paciente in pacientes_faltas %}
+                                <tr>
+                                    <td>{{ paciente.usuario.nombres }} {{ paciente.usuario.apellidos }}</td>
+                                    <td>{{ paciente.usuario.dni }}</td>
+                                    <td>
+                                        <span class="badge {% if paciente.faltas_consecutivas >= 2 %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                                            {{ paciente.faltas_consecutivas }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if paciente.estado_reserva == 'activo' %}
+                                        <span class="badge bg-success">Activo</span>
+                                        {% elif paciente.estado_reserva == 'bloqueado' %}
+                                        <span class="badge bg-danger">Bloqueado</span>
+                                        {% elif paciente.estado_reserva == 'supervisado' %}
+                                        <span class="badge bg-warning text-dark">Supervisado</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="/pacientes/{{ paciente.id }}/justificar-faltas/" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-check-circle me-1"></i>Justificar
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>No hay pacientes con faltas consecutivas.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Notificaciones -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title"><i class="fas fa-bell me-2"></i>Notificaciones Recientes</h5>
+                    <a href="/notificaciones/" class="btn btn-sm btn-primary">Ver Todas</a>
+                </div>
+                <div class="card-body">
+                    {% if notificaciones %}
+                    <div class="list-group">
+                        {% for notificacion in notificaciones %}
+                        <div class="list-group-item list-group-item-action {% if notificacion.importante %}list-group-item-warning{% endif %}">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">
+                                    {% if notificacion.tipo == 'confirmacion' %}
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    {% elif notificacion.tipo == 'recordatorio' %}
+                                    <i class="fas fa-clock text-primary me-2"></i>
+                                    {% elif notificacion.tipo == 'cancelacion' %}
+                                    <i class="fas fa-times-circle text-danger me-2"></i>
+                                    {% elif notificacion.tipo == 'advertencia' %}
+                                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                                    {% else %}
+                                    <i class="fas fa-info-circle text-info me-2"></i>
+                                    {% endif %}
+                                    {{ notificacion.tipo|title }}
+                                </h6>
+                                <small>{{ notificacion.fecha_envio|date:"d/m/Y H:i" }}</small>
+                            </div>
+                            <p class="mb-1">{{ notificacion.mensaje }}</p>
+                            <div class="d-flex justify-content-end mt-2">
+                                <button class="btn btn-sm btn-outline-secondary" onclick="marcarLeida('{{ notificacion.id }}')">
+                                    <i class="fas fa-check me-1"></i>Marcar como leída
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>No tienes notificaciones sin leer.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function marcarLeida(notificacionId) {
+        // Función para marcar una notificación como leída
+        // Implementar llamada AJAX
+        console.log('Marcar como leída la notificación:', notificacionId);
+    }
+</script>
+{% endblock %}
