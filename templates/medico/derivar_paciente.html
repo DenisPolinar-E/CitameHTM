@@ -67,6 +67,7 @@
                                         <option value="{{ especialidad.id }}">{{ especialidad.nombre }}</option>
                                     {% endfor %}
                                 </select>
+                                
                             </div>
                             
                             <div class="mb-3">
@@ -82,7 +83,7 @@
                         
                             <!-- Sección de agendamiento de cita -->
                             <h4 class="mt-4">Agendar Cita con Especialista</h4>
-                            <div id="seccion-agendamiento" class="card mt-2 mb-3 border-success" style="display: block;">
+                            <div id="seccion-agendamiento" class="card mt-2 mb-3 border-success">
                                 <div class="card-header bg-success text-white">
                                     <h5 class="mb-0"><i class="fas fa-calendar-check me-2"></i>Agendar Cita con Especialista</h5>
                                 </div>
@@ -129,74 +130,6 @@
         </div>
     </div>
     
-    <!-- JavaScript directo para depuración -->
-    <script>
-    // Ejecutar inmediatamente
-    alert('Script directo ejecutándose');
-    
-    // Esperar a que el documento esté listo
-    document.addEventListener('DOMContentLoaded', function() {
-        alert('DOM está listo');
-        
-        // Obtener el selector de especialidades
-        var especialidadSelect = document.getElementById('especialidad');
-        console.log('Selector de especialidad encontrado:', especialidadSelect);
-        
-        if (especialidadSelect) {
-            // Agregar listener de evento manualmente
-            especialidadSelect.addEventListener('change', function() {
-                var valor = this.value;
-                alert('CAMBIO DETECTADO: ' + valor);
-                
-                // Mostrar sección de agendamiento
-                document.getElementById('seccion-agendamiento').style.display = 'block';
-                
-                // Preparar para llamada AJAX
-                var xhr = new XMLHttpRequest();
-                xhr.open('GET', '/api/medicos-por-especialidad/' + valor + '/', true);
-                
-                xhr.onload = function() {
-                    if (xhr.status >= 200 && xhr.status < 400) {
-                        // Éxito
-                        alert('Respuesta recibida: ' + xhr.responseText);
-                        var data = JSON.parse(xhr.responseText);
-                        
-                        var medicoSelect = document.getElementById('medico_especialista');
-                        var options = '<option value="">Seleccione un médico</option>';
-                        
-                        if (data && data.length > 0) {
-                            for (var i = 0; i < data.length; i++) {
-                                options += '<option value="' + data[i].id + '">' + 
-                                         data[i].nombres + ' ' + data[i].apellidos + '</option>';
-                            }
-                        } else {
-                            options = '<option value="">No hay médicos disponibles</option>';
-                        }
-                        
-                        medicoSelect.innerHTML = options;
-                    } else {
-                        // Error
-                        alert('Error en la solicitud: ' + xhr.status);
-                    }
-                };
-                
-                xhr.onerror = function() {
-                    alert('Error de conexión');
-                };
-                
-                xhr.send();
-            });
-            
-            // Agregar listener de evento con trigger manual para probar
-            alert('Añadiendo evento click para probar');
-            especialidadSelect.addEventListener('click', function() {
-                alert('Clic en selector de especialidad');
-            });
-        } else {
-            alert('ERROR: No se encontró el selector de especialidades');
-        }
-    });
-    </script>
 {% endblock %}
 
 {% block extra_js %}
@@ -204,11 +137,10 @@
 <!-- Cargando directamente jQuery para asegurar que esté disponible -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-<!-- Código JavaScript directamente en la plantilla para depuración -->
+<!-- Código JavaScript para la funcionalidad de derivación y agendamiento -->
 <script>
 $(document).ready(function() {
-    // Alerta inicial para verificar que jQuery funciona
-    alert('Plantilla derivar_paciente.html - jQuery versión: ' + $.fn.jquery);
+    console.log('Plantilla derivar_paciente.html - jQuery versión: ' + $.fn.jquery);
     
     // Configurar fecha mínima como hoy
     var today = new Date();
@@ -218,60 +150,325 @@ $(document).ready(function() {
     today = yyyy + '-' + mm + '-' + dd;
     $('#fecha_cita').attr('min', today);
     
-    // Mostrar siempre la sección de agendamiento para pruebas
-    $('#seccion-agendamiento').show();
-    console.log('Sección de agendamiento visible');
+    // Ocultar inicialmente la sección de agendamiento
+    $('#seccion-agendamiento').hide();
+    console.log('Sección de agendamiento oculta inicialmente');
+    
+    // Deshabilitar campos inicialmente
+    $('#medico_especialista').prop('disabled', true);
+    $('#fecha_cita').prop('disabled', true);
+    $('#horario_cita').prop('disabled', true);
     
     // Evento de cambio para el selector de especialidades
     $('#especialidad').on('change', function() {
         var especialidadId = $(this).val();
-        alert('Especialidad seleccionada: ' + especialidadId);
         console.log('Especialidad seleccionada:', especialidadId);
         
         if (especialidadId) {
             // Mostrar sección de agendamiento
             $('#seccion-agendamiento').show();
+            console.log('Sección de agendamiento mostrada');
+            
+            // Verificar que el selector de médicos exista
+            var medicoSelector = $('#medico_especialista');
+            if (medicoSelector.length === 0) {
+                console.error('ERROR: No se encontró el selector de médicos');
+                alert('Error: No se encontró el selector de médicos en el DOM');
+                return;
+            }
             
             // Preparar selector de médicos
-            $('#medico_especialista').html('<option value="">Cargando médicos...</option>').prop('disabled', true);
+            medicoSelector.html('<option value="">Cargando médicos...</option>').prop('disabled', true);
+            console.log('Selector de médicos preparado para carga');
+            
+            // Resetear campos dependientes
+            $('#fecha_cita').val('');
+            $('#horario_cita').html('<option value="">Seleccione médico y fecha primero</option>').prop('disabled', true);
+            $('#consultorio').val('');
             
             // Cargar médicos para esta especialidad
+            // Log para depuración
+            console.log('Cargando médicos para especialidad ID:', especialidadId);
+            
+            // URL de la API
+            var apiUrl = '/api/derivacion/medicos-por-especialidad/' + especialidadId + '/';
+            console.log('URL de la API:', apiUrl);
+            
             $.ajax({
-                url: '/api/derivacion/medicos-por-especialidad/' + especialidadId + '/',
+                url: apiUrl,
                 type: 'GET',
                 dataType: 'json',
                 success: function(data) {
-                    console.log('API respuesta exitosa:', data);
-                    alert('Médicos encontrados: ' + (data ? data.length : 0));
+                    console.log('Respuesta de la API:', data);
                     
+                    // Verificar el tipo de datos recibido
+                    console.log('Tipo de datos recibidos:', typeof data);
+                    console.log('¿Es un array?', Array.isArray(data));
+                    console.log('Longitud de datos:', data ? (Array.isArray(data) ? data.length : 'No es array') : 'Datos nulos');
+                    
+                    // Depuración especial para Diagnóstico por Imágenes (ID 11)
+                    if (especialidadId == 11) {
+                        console.log('DEPURACIÓN ESPECIAL PARA DIAGNÓSTICO POR IMÁGENES:');
+                        console.log('Datos completos:', JSON.stringify(data));
+                        alert('Diagnóstico por Imágenes seleccionado. Médicos encontrados: ' + 
+                              (Array.isArray(data) ? data.length : 'No es array'));
+                    }
+                    
+                    // Mostrar alerta con información de depuración
+                    var debugInfo = 'Datos recibidos: ' + JSON.stringify(data).substring(0, 100) + '...';
+                    console.log(debugInfo);
+                    
+                    // Crear el selector de médicos desde cero
                     var options = '<option value="">Seleccione un médico</option>';
                     
-                    if (data && data.length > 0) {
+                    // Verificar si hay datos válidos
+                    if (data && Array.isArray(data) && data.length > 0) {
+                        console.log('Procesando ' + data.length + ' médicos encontrados');
+                        
+                        // Procesar cada médico
                         for (var i = 0; i < data.length; i++) {
                             var medico = data[i];
-                            options += '<option value="' + medico.id + '">' + 
-                                     medico.nombres + ' ' + medico.apellidos + ' - CMP: ' + 
-                                     (medico.cmp || 'N/A') + '</option>';
+                            console.log('Procesando médico ' + (i+1) + ':', medico);
+                            
+                            // Verificar que el médico tenga los campos necesarios
+                            if (medico && typeof medico === 'object') {
+                                // Extraer datos con comprobaciones de seguridad
+                                var id = medico.id || '';
+                                var nombres = medico.nombres || 'Sin nombre';
+                                var apellidos = medico.apellidos || 'Sin apellido';
+                                var cmp = medico.cmp || 'N/A';
+                                
+                                // Crear la opción para este médico
+                                var optionHtml = '<option value="' + id + '">' + 
+                                               nombres + ' ' + apellidos + ' - CMP: ' + 
+                                               cmp + '</option>';
+                                               
+                                console.log('HTML generado para médico:', optionHtml);
+                                options += optionHtml;
+                            } else {
+                                console.error('Datos de médico inválidos:', medico);
+                            }
                         }
                     } else {
                         options = '<option value="">No hay médicos disponibles</option>';
+                        console.log('No se encontraron médicos para esta especialidad');
                     }
                     
-                    $('#medico_especialista').html(options).prop('disabled', false);
+                    // Actualizar el selector y mostrar el HTML generado
+                    console.log('HTML generado para el selector:', options);
+                    
+                    // Verificar que el selector exista antes de actualizarlo
+                    var medicoSelector = $('#medico_especialista');
+                    if (medicoSelector.length === 0) {
+                        console.error('ERROR: No se encontró el selector de médicos al intentar actualizarlo');
+                        alert('Error: No se encontró el selector de médicos en el DOM');
+                        return;
+                    }
+                    
+                    // Actualizar el selector
+                    medicoSelector.html(options).prop('disabled', false);
+                    console.log('Selector de médicos actualizado con éxito');
+                    
+                    // Verificar la estructura del DOM después de la actualización
+                    setTimeout(function() {
+                        console.log('Estructura del selector después de actualizar:', medicoSelector.html());
+                        console.log('Número de opciones en el selector:', medicoSelector.find('option').length);
+                    }, 100);
                 },
                 error: function(xhr, status, error) {
                     console.error('Error API:', status, error);
                     console.error('Respuesta:', xhr.responseText);
-                    alert('Error: ' + error + ' - Status: ' + status);
+                    
+                    // Mostrar mensaje de error más amigable
+                    var errorMsg = '';
+                    try {
+                        var respuesta = JSON.parse(xhr.responseText);
+                        errorMsg = respuesta.error || 'Error desconocido';
+                    } catch(e) {
+                        errorMsg = 'Error de conexión con el servidor';
+                    }
+                    
+                    alert('No se pudieron cargar los médicos: ' + errorMsg);
                     
                     $('#medico_especialista')
                         .html('<option value="">Error al cargar médicos</option>')
-                        .prop('disabled', false);
+                        .prop('disabled', true);
                 }
             });
         } else {
-            $('#medico_especialista').html('<option value="">Seleccione una especialidad primero</option>');
+            // Resetear todos los campos
+            $('#medico_especialista').html('<option value="">Seleccione una especialidad primero</option>').prop('disabled', true);
+            $('#fecha_cita').val('');
+            $('#horario_cita').html('<option value="">Seleccione médico y fecha primero</option>').prop('disabled', true);
+            $('#consultorio').val('');
         }
+    });
+    
+    // Evento cuando se selecciona un médico
+    $('#medico_especialista').on('change', function() {
+        // Resetear campos dependientes
+        $('#fecha_cita').val('');
+        $('#horario_cita').html('<option value="">Seleccione una fecha</option>').prop('disabled', true);
+        $('#consultorio').val('');
+        
+        if ($(this).val()) {
+            // Habilitar selección de fecha
+            $('#fecha_cita').prop('disabled', false);
+        } else {
+            $('#fecha_cita').prop('disabled', true);
+        }
+    });
+    
+    // Evento cuando se selecciona una fecha
+    $('#fecha_cita').on('change', function() {
+        var medicoId = $('#medico_especialista').val();
+        var fecha = $(this).val();
+        
+        if (medicoId && fecha) {
+            // Cargar horarios disponibles
+            $('#horario_cita').html('<option value="">Cargando horarios...</option>').prop('disabled', true);
+            
+            $.ajax({
+                url: '/api/derivacion/horarios-disponibles/' + medicoId + '/' + fecha + '/',
+                type: 'GET',
+                dataType: 'json',
+                success: function(data) {
+                    console.log('Horarios disponibles:', data);
+                    
+                    var options = '<option value="">Seleccione un horario</option>';
+                    
+                    if (data && data.length > 0) {
+                        for (var i = 0; i < data.length; i++) {
+                            var horario = data[i];
+                            
+                            // Convertir las horas de inicio y fin a objetos Date para manipulación
+                            var horaInicio = new Date('1970-01-01T' + horario.hora_inicio + ':00');
+                            var horaFin = new Date('1970-01-01T' + horario.hora_fin + ':00');
+                            
+                            // Generar intervalos de 30 minutos
+                            var currentTime = new Date(horaInicio);
+                            
+                            while (currentTime < horaFin) {
+                                // Formato de hora actual
+                                var horaActual = ('0' + currentTime.getHours()).slice(-2) + ':' + 
+                                                ('0' + currentTime.getMinutes()).slice(-2);
+                                
+                                // Calcular hora final del intervalo (30 minutos después)
+                                var nextTime = new Date(currentTime);
+                                nextTime.setMinutes(nextTime.getMinutes() + 30);
+                                
+                                // Si la hora final excede la hora de fin del bloque, usar la hora de fin
+                                if (nextTime > horaFin) {
+                                    nextTime = new Date(horaFin);
+                                }
+                                
+                                // Formato de hora final
+                                var horaFinal = ('0' + nextTime.getHours()).slice(-2) + ':' + 
+                                               ('0' + nextTime.getMinutes()).slice(-2);
+                                
+                                // Crear opción solo si el intervalo es válido (al menos 30 minutos)
+                                if ((nextTime - currentTime) >= 25 * 60 * 1000) { // 25 minutos en milisegundos (tolerancia)
+                                    options += '<option value="' + horario.id + '" ' +
+                                             'data-consultorio="' + horario.consultorio + '" ' +
+                                             'data-hora-inicio="' + horaActual + '" ' +
+                                             'data-hora-fin="' + horaFinal + '">' + 
+                                             horaActual + ' - ' + horaFinal + '</option>';
+                                }
+                                
+                                // Avanzar 30 minutos
+                                currentTime.setMinutes(currentTime.getMinutes() + 30);
+                            }
+                        }
+                        $('#horario_cita').html(options).prop('disabled', false);
+                    } else {
+                        $('#horario_cita').html('<option value="">No hay horarios disponibles</option>').prop('disabled', true);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error al cargar horarios:', error);
+                    $('#horario_cita').html('<option value="">Error al cargar horarios</option>').prop('disabled', true);
+                }
+            });
+        } else {
+            $('#horario_cita').html('<option value="">Seleccione médico y fecha primero</option>').prop('disabled', true);
+        }
+    });
+    
+    // Evento cuando se selecciona un horario
+    $('#horario_cita').on('change', function() {
+        var selectedOption = $(this).find('option:selected');
+        var consultorio = selectedOption.data('consultorio');
+        var horaInicio = selectedOption.data('hora-inicio');
+        var horaFin = selectedOption.data('hora-fin');
+        
+        if (consultorio) {
+            $('#consultorio').val(consultorio);
+            
+            // Guardar horas específicas en campos ocultos si existen
+            if ($('#hora_inicio_hidden').length > 0 && horaInicio) {
+                $('#hora_inicio_hidden').val(horaInicio);
+            }
+            
+            if ($('#hora_fin_hidden').length > 0 && horaFin) {
+                $('#hora_fin_hidden').val(horaFin);
+            }
+            
+            // Actualizar campos visibles si existen
+            if ($('#hora_inicio_visible').length > 0 && horaInicio) {
+                $('#hora_inicio_visible').val(horaInicio);
+            }
+            
+            if ($('#hora_fin_visible').length > 0 && horaFin) {
+                $('#hora_fin_visible').val(horaFin);
+            }
+            
+            console.log('Horario seleccionado: ' + horaInicio + ' - ' + horaFin + ' en consultorio ' + consultorio);
+        } else {
+            $('#consultorio').val('');
+            
+            // Limpiar campos de hora
+            if ($('#hora_inicio_hidden').length > 0) {
+                $('#hora_inicio_hidden').val('');
+            }
+            
+            if ($('#hora_fin_hidden').length > 0) {
+                $('#hora_fin_hidden').val('');
+            }
+            
+            if ($('#hora_inicio_visible').length > 0) {
+                $('#hora_inicio_visible').val('');
+            }
+            
+            if ($('#hora_fin_visible').length > 0) {
+                $('#hora_fin_visible').val('');
+            }
+        }
+    });
+    
+    // Validación del formulario antes de enviar
+    $('#derivacionForm').on('submit', function(e) {
+        var especialidad = $('#especialidad').val();
+        var motivo = $('#motivo_derivacion').val();
+        
+        if (!especialidad || !motivo) {
+            e.preventDefault();
+            alert('Debe seleccionar una especialidad y especificar el motivo de la derivación.');
+            return false;
+        }
+        
+        // Verificar si se está intentando agendar una cita
+        var medicoEspecialista = $('#medico_especialista').val();
+        var fechaCita = $('#fecha_cita').val();
+        var horarioCita = $('#horario_cita').val();
+        
+        if ((medicoEspecialista || fechaCita || horarioCita) && 
+            (!medicoEspecialista || !fechaCita || !horarioCita)) {
+            e.preventDefault();
+            alert('Si desea agendar una cita, debe completar todos los campos: médico especialista, fecha y horario.');
+            return false;
+        }
+        
+        return true;
     });
 });
 </script>

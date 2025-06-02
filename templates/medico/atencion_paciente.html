@@ -69,9 +69,10 @@
                             <div class="tab-content" id="atencionTabContent">
                                 <!-- Pestaña de Atención Médica -->
                                 <div class="tab-pane fade show active" id="atencion" role="tabpanel" aria-labelledby="atencion-tab">
-                                    <form method="post" action="">
+                                    <form method="post" action="" id="atencion-form">
                                         {% csrf_token %}
                                         <input type="hidden" name="accion" value="atender">
+                                        <input type="hidden" name="redireccion" id="redireccion" value="dashboard">
                                         
                                         <div class="mb-3">
                                             <label for="diagnostico" class="form-label">Diagnóstico</label>
@@ -88,9 +89,31 @@
                                             <textarea class="form-control" id="observaciones" name="observaciones" rows="2"></textarea>
                                         </div>
                                         
+                                        <div class="mb-4">
+                                            <label class="form-label fw-bold">¿Requiere derivación a especialista?</label>
+                                            <div class="d-flex gap-4">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="requiere_derivacion" id="requiere_derivacion_no" value="no" checked>
+                                                    <label class="form-check-label" for="requiere_derivacion_no">
+                                                        <i class="fas fa-times-circle text-danger me-1"></i> No
+                                                    </label>
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="requiere_derivacion" id="requiere_derivacion_si" value="si">
+                                                    <label class="form-check-label" for="requiere_derivacion_si">
+                                                        <i class="fas fa-check-circle text-success me-1"></i> Sí
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div id="derivacion_info" class="alert alert-info mt-2 d-none">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                <strong>Nota:</strong> Al registrar la atención, se le redirigirá automáticamente a la página de derivación a especialista.
+                                            </div>
+                                        </div>
+                                        
                                         <div class="d-grid gap-2">
-                                            <button type="submit" class="btn btn-primary">
-                                                <i class="fas fa-save me-1"></i> Registrar Atención
+                                            <button type="submit" class="btn btn-primary btn-lg" id="btn-registrar-atencion">
+                                                <i class="fas fa-save me-1"></i> <span id="btn-text">Registrar Atención</span>
                                             </button>
                                         </div>
                                     </form>
@@ -112,6 +135,11 @@
                                             </select>
                                         </div>
                                         
+                                        <div class="alert alert-success mb-3">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            <strong>Información:</strong> Esta derivación está vinculada a la atención médica actual.
+                                        </div>
+                                        
                                         <div class="mb-3">
                                             <label for="motivo_derivacion" class="form-label">Motivo de la Derivación</label>
                                             <textarea class="form-control" id="motivo_derivacion" name="motivo_derivacion" rows="3" required></textarea>
@@ -123,14 +151,51 @@
                                             <div class="form-text">Número de días en que el paciente puede usar esta derivación.</div>
                                         </div>
                                         
+                                        <!-- Sección de agendamiento de cita -->
+                                        <h4 class="mt-4">Agendar Cita con Especialista</h4>
+                                        <div id="seccion-agendamiento" class="card mt-2 mb-3 border-success">
+                                            <div class="card-header bg-success text-white">
+                                                <h5 class="mb-0"><i class="fas fa-calendar-check me-2"></i>Agendar Cita con Especialista</h5>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="mb-3">
+                                                    <label for="medico_especialista" class="form-label">Médico Especialista</label>
+                                                    <select class="form-select" id="medico_especialista" name="medico_especialista">
+                                                        <option value="">Seleccione una especialidad primero</option>
+                                                    </select>
+                                                </div>
+                                                
+                                                <div class="mb-3">
+                                                    <label for="fecha_cita" class="form-label">Fecha de Cita</label>
+                                                    <input type="date" class="form-control" id="fecha_cita" name="fecha_cita">
+                                                </div>
+                                                
+                                                <div class="mb-3">
+                                                    <label for="horario_cita" class="form-label">Horario Disponible</label>
+                                                    <select class="form-select" id="horario_cita" name="horario_cita">
+                                                        <option value="">Seleccione médico y fecha primero</option>
+                                                    </select>
+                                                </div>
+                                                
+                                                <div class="mb-3">
+                                                    <label for="consultorio" class="form-label">Consultorio</label>
+                                                    <input type="text" class="form-control" id="consultorio" name="consultorio" readonly>
+                                                </div>
+                                                
+                                                <div class="form-text text-muted">
+                                                    <strong>Nota:</strong> El agendamiento de cita es opcional. Si no se agenda ahora, el paciente deberá hacerlo posteriormente.
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
                                         <div class="alert alert-info">
                                             <i class="fas fa-info-circle me-2"></i>
                                             <strong>Nota:</strong> Primero complete la atención médica en la pestaña anterior y luego proceda con la derivación si es necesario.
                                         </div>
                                         
                                         <div class="d-grid gap-2">
-                                            <button type="submit" class="btn btn-success">
-                                                <i class="fas fa-exchange-alt me-1"></i> Derivar Paciente
+                                            <button type="submit" class="btn btn-success btn-lg">
+                                                <i class="fas fa-exchange-alt me-1"></i> Derivar y Agendar Cita
                                             </button>
                                         </div>
                                     </form>
@@ -143,9 +208,58 @@
         </div>
 {% endblock %}
 
+{% block page_title %}Atención Médica{% endblock %}
+
 {% block scripts %}
 <script>
     $(document).ready(function() {
+        // Actualizar el comportamiento del formulario según la opción de derivación
+        function actualizarComportamientoFormulario() {
+            if ($('#requiere_derivacion_si').is(':checked')) {
+                // Si requiere derivación, actualizar el botón
+                $('#btn-text').html('Registrar y Continuar a Derivación');
+                $('#btn-registrar-atencion').addClass('btn-success').removeClass('btn-primary');
+            } else {
+                // Si no requiere derivación, restaurar el botón
+                $('#btn-text').html('Registrar Atención');
+                $('#btn-registrar-atencion').addClass('btn-primary').removeClass('btn-success');
+            }
+        }
+        
+        // Deshabilitar la pestaña de derivación si no se requiere
+        function actualizarAccesoDerivacion() {
+            if ($('#requiere_derivacion_no').is(':checked')) {
+                // Deshabilitar la pestaña de derivación
+                $('#derivacion-tab').addClass('disabled').attr('tabindex', '-1').attr('aria-disabled', 'true');
+                
+                // Si la pestaña de derivación está activa, cambiar a la de atención
+                if ($('#derivacion-tab').hasClass('active')) {
+                    $('#atencion-tab').tab('show');
+                }
+            } else {
+                // Habilitar la pestaña de derivación
+                $('#derivacion-tab').removeClass('disabled').removeAttr('tabindex').attr('aria-disabled', 'false');
+            }
+        }
+        
+        // Actualizar la interfaz cuando se cambia la opción de derivación
+        $('input[name="requiere_derivacion"]').change(function() {
+            // Actualizar el mensaje informativo
+            if ($(this).val() === 'si') {
+                $('#derivacion_info').removeClass('d-none');
+            } else {
+                $('#derivacion_info').addClass('d-none');
+            }
+            
+            // Actualizar el comportamiento del formulario
+            actualizarComportamientoFormulario();
+            
+            // Actualizar el acceso a la pestaña de derivación
+            actualizarAccesoDerivacion();
+        });
+        
+        // Ejecutar verificación inicial
+        $('input[name="requiere_derivacion"]:checked').trigger('change');
         // Mostrar/ocultar campos de atención médica en la derivación
         $('#registrar_atencion').change(function() {
             if(this.checked) {
@@ -156,6 +270,352 @@
                 $('#atencion_adicional').slideUp();
                 $('#diagnostico_derivacion').prop('required', false);
                 $('#tratamiento_derivacion').prop('required', false);
+            }
+        });
+        
+        // Gestionar la selección de derivación
+        $('input[name="requiere_derivacion"]').change(function() {
+            if ($(this).val() === 'si') {
+                // Mostrar mensaje informativo
+                $('#derivacion_info').removeClass('d-none');
+                
+                // Habilitar pestaña de derivación
+                $('#derivacion-tab').removeClass('disabled').prop('disabled', false);
+                
+                // Habilitar botón superior de derivación (si existe)
+                $('.btn-derivar-especialista, a:contains("Derivar a Especialista")').removeClass('disabled').prop('disabled', false);
+            } else {
+                // Ocultar mensaje informativo
+                $('#derivacion_info').addClass('d-none');
+                
+                // Deshabilitar pestaña de derivación
+                $('#derivacion-tab').addClass('disabled').prop('disabled', true);
+                
+                // Deshabilitar botón superior de derivación (si existe)
+                $('.btn-derivar-especialista, a:contains("Derivar a Especialista")').addClass('disabled').prop('disabled', true);
+                
+                // Si la pestaña de derivación está activa, cambiar a la pestaña de atención
+                if ($('#derivacion').hasClass('active')) {
+                    $('#atencion-tab').tab('show');
+                }
+            }
+        });
+        
+        // Manejar el envío del formulario de atención
+        $('#atencion-form').submit(function(e) {
+            // Si requiere derivación, almacenar en localStorage para activar la pestaña después
+            if ($('#requiere_derivacion_si').is(':checked')) {
+                localStorage.setItem('activar_derivacion', 'true');
+            } else {
+                localStorage.removeItem('activar_derivacion');
+            }
+        });
+        
+        // Verificar si se debe activar la pestaña de derivación al cargar la página
+        if (localStorage.getItem('activar_derivacion') === 'true') {
+            // Activar la pestaña de derivación
+            $('#derivacion-tab').removeClass('disabled').prop('disabled', false).tab('show');
+            
+            // Habilitar botón superior de derivación (si existe)
+            $('.btn-derivar-especialista, a:contains("Derivar a Especialista")').removeClass('disabled').prop('disabled', false);
+            
+            // Marcar la opción "Sí" en requiere derivación
+            $('#requiere_derivacion_si').prop('checked', true).trigger('change');
+            
+            // Limpiar el flag
+            localStorage.removeItem('activar_derivacion');
+        } else {
+            // Por defecto, deshabilitar la pestaña de derivación si no se requiere
+            if ($('#requiere_derivacion_no').is(':checked')) {
+                $('#derivacion-tab').addClass('disabled').prop('disabled', true);
+                
+                // Deshabilitar botón superior de derivación (si existe)
+                $('.btn-derivar-especialista, a:contains("Derivar a Especialista")').addClass('disabled').prop('disabled', true);
+            }
+        }
+        
+        // Configurar fecha mínima como hoy
+        var today = new Date();
+        var dd = String(today.getDate()).padStart(2, '0');
+        var mm = String(today.getMonth() + 1).padStart(2, '0');
+        var yyyy = today.getFullYear();
+        today = yyyy + '-' + mm + '-' + dd;
+        $('#fecha_cita').attr('min', today);
+        
+        // Ocultar inicialmente la sección de agendamiento
+        $('#seccion-agendamiento').hide();
+        console.log('Sección de agendamiento oculta inicialmente');
+        
+        // Deshabilitar campos inicialmente
+        $('#medico_especialista').prop('disabled', true);
+        $('#fecha_cita').prop('disabled', true);
+        $('#horario_cita').prop('disabled', true);
+        
+        // Evento de cambio para el selector de especialidades
+        $('#especialidad').on('change', function() {
+            var especialidadId = $(this).val();
+            console.log('Especialidad seleccionada:', especialidadId);
+            
+            if (especialidadId) {
+                // Mostrar sección de agendamiento
+                $('#seccion-agendamiento').show();
+                console.log('Sección de agendamiento mostrada');
+                
+                // Verificar que el selector de médicos exista
+                var medicoSelector = $('#medico_especialista');
+                if (medicoSelector.length === 0) {
+                    console.error('ERROR: No se encontró el selector de médicos');
+                    alert('Error: No se encontró el selector de médicos en el DOM');
+                    return;
+                }
+                
+                // Preparar selector de médicos
+                medicoSelector.html('<option value="">Cargando médicos...</option>').prop('disabled', true);
+                console.log('Selector de médicos preparado para carga');
+                
+                // Resetear campos dependientes
+                $('#fecha_cita').val('');
+                $('#horario_cita').html('<option value="">Seleccione médico y fecha primero</option>').prop('disabled', true);
+                $('#consultorio').val('');
+                
+                // Cargar médicos para esta especialidad
+                console.log('Cargando médicos para especialidad ID:', especialidadId);
+                
+                // URL de la API
+                var apiUrl = '/api/derivacion/medicos-por-especialidad/' + especialidadId + '/';
+                console.log('URL de la API:', apiUrl);
+                
+                $.ajax({
+                    url: apiUrl,
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(data) {
+                        console.log('Respuesta de la API:', data);
+                        
+                        // Verificar el tipo de datos recibido
+                        console.log('Tipo de datos recibidos:', typeof data);
+                        console.log('¿Es un array?', Array.isArray(data));
+                        console.log('Longitud de datos:', data ? (Array.isArray(data) ? data.length : 'No es array') : 'Datos nulos');
+                        
+                        // Crear el selector de médicos desde cero
+                        var options = '<option value="">Seleccione un médico</option>';
+                        
+                        // Verificar si hay datos válidos
+                        if (data && Array.isArray(data) && data.length > 0) {
+                            console.log('Procesando ' + data.length + ' médicos encontrados');
+                            
+                            // Procesar cada médico
+                            for (var i = 0; i < data.length; i++) {
+                                var medico = data[i];
+                                console.log('Procesando médico ' + (i+1) + ':', medico);
+                                
+                                // Verificar que el médico tenga los campos necesarios
+                                if (medico && typeof medico === 'object') {
+                                    // Extraer datos con comprobaciones de seguridad
+                                    var id = medico.id || '';
+                                    var nombres = medico.nombres || 'Sin nombre';
+                                    var apellidos = medico.apellidos || 'Sin apellido';
+                                    var cmp = medico.cmp || 'N/A';
+                                    
+                                    // Crear la opción para este médico
+                                    var optionHtml = '<option value="' + id + '">' + 
+                                                   nombres + ' ' + apellidos + ' - CMP: ' + 
+                                                   cmp + '</option>';
+                                                   
+                                    console.log('HTML generado para médico:', optionHtml);
+                                    options += optionHtml;
+                                } else {
+                                    console.error('Datos de médico inválidos:', medico);
+                                }
+                            }
+                        } else {
+                            options = '<option value="">No hay médicos disponibles</option>';
+                            console.log('No se encontraron médicos para esta especialidad');
+                        }
+                        
+                        // Actualizar el selector y mostrar el HTML generado
+                        console.log('HTML generado para el selector:', options);
+                        
+                        // Verificar que el selector exista antes de actualizarlo
+                        var medicoSelector = $('#medico_especialista');
+                        if (medicoSelector.length === 0) {
+                            console.error('ERROR: No se encontró el selector de médicos al intentar actualizarlo');
+                            alert('Error: No se encontró el selector de médicos en el DOM');
+                            return;
+                        }
+                        
+                        // Actualizar el selector
+                        medicoSelector.html(options).prop('disabled', false);
+                        console.log('Selector de médicos actualizado con éxito');
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error API:', status, error);
+                        console.error('Respuesta:', xhr.responseText);
+                        
+                        // Mostrar mensaje de error más amigable
+                        var errorMsg = '';
+                        try {
+                            var respuesta = JSON.parse(xhr.responseText);
+                            errorMsg = respuesta.error || 'Error desconocido';
+                        } catch(e) {
+                            errorMsg = 'Error de conexión con el servidor';
+                        }
+                        
+                        alert('No se pudieron cargar los médicos: ' + errorMsg);
+                        
+                        $('#medico_especialista')
+                            .html('<option value="">Error al cargar médicos</option>')
+                            .prop('disabled', true);
+                    }
+                });
+            } else {
+                // Ocultar sección de agendamiento
+                $('#seccion-agendamiento').hide();
+                
+                // Resetear todos los campos
+                $('#medico_especialista').html('<option value="">Seleccione una especialidad primero</option>').prop('disabled', true);
+                $('#fecha_cita').val('');
+                $('#horario_cita').html('<option value="">Seleccione médico y fecha primero</option>').prop('disabled', true);
+                $('#consultorio').val('');
+            }
+        });
+        
+        // Evento cuando se selecciona un médico
+        $('#medico_especialista').on('change', function() {
+            // Resetear campos dependientes
+            $('#fecha_cita').val('');
+            $('#horario_cita').html('<option value="">Seleccione una fecha</option>').prop('disabled', true);
+            $('#consultorio').val('');
+            
+            if ($(this).val()) {
+                // Habilitar selección de fecha
+                $('#fecha_cita').prop('disabled', false);
+            } else {
+                $('#fecha_cita').prop('disabled', true);
+            }
+        });
+        
+        // Evento cuando se selecciona una fecha
+        $('#fecha_cita').on('change', function() {
+            var medicoId = $('#medico_especialista').val();
+            var fecha = $(this).val();
+            
+            if (medicoId && fecha) {
+                // Cargar horarios disponibles
+                $('#horario_cita').html('<option value="">Cargando horarios...</option>').prop('disabled', true);
+                
+                $.ajax({
+                    url: '/api/derivacion/horarios-disponibles/' + medicoId + '/' + fecha + '/',
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(data) {
+                        console.log('Horarios disponibles:', data);
+                        
+                        var options = '<option value="">Seleccione un horario</option>';
+                        
+                        if (data && data.length > 0) {
+                            for (var i = 0; i < data.length; i++) {
+                                var horario = data[i];
+                                
+                                // Convertir las horas de inicio y fin a objetos Date para manipulación
+                                var horaInicio = new Date('1970-01-01T' + horario.hora_inicio + ':00');
+                                var horaFin = new Date('1970-01-01T' + horario.hora_fin + ':00');
+                                
+                                // Generar intervalos de 30 minutos
+                                var currentTime = new Date(horaInicio);
+                                
+                                while (currentTime < horaFin) {
+                                    // Formato de hora actual
+                                    var horaActual = ('0' + currentTime.getHours()).slice(-2) + ':' + 
+                                                    ('0' + currentTime.getMinutes()).slice(-2);
+                                    
+                                    // Calcular hora final del intervalo (30 minutos después)
+                                    var nextTime = new Date(currentTime);
+                                    nextTime.setMinutes(nextTime.getMinutes() + 30);
+                                    
+                                    // Si la hora final excede la hora de fin del bloque, usar la hora de fin
+                                    if (nextTime > horaFin) {
+                                        nextTime = new Date(horaFin);
+                                    }
+                                    
+                                    // Formato de hora final
+                                    var horaFinal = ('0' + nextTime.getHours()).slice(-2) + ':' + 
+                                                   ('0' + nextTime.getMinutes()).slice(-2);
+                                    
+                                    // Crear opción solo si el intervalo es válido (al menos 30 minutos)
+                                    if ((nextTime - currentTime) >= 25 * 60 * 1000) { // 25 minutos en milisegundos (tolerancia)
+                                        options += '<option value="' + horario.id + '" ' +
+                                                 'data-consultorio="' + horario.consultorio + '" ' +
+                                                 'data-hora-inicio="' + horaActual + '" ' +
+                                                 'data-hora-fin="' + horaFinal + '">' + 
+                                                 horaActual + ' - ' + horaFinal + '</option>';
+                                    }
+                                    
+                                    // Avanzar 30 minutos
+                                    currentTime.setMinutes(currentTime.getMinutes() + 30);
+                                }
+                            }
+                            $('#horario_cita').html(options).prop('disabled', false);
+                        } else {
+                            $('#horario_cita').html('<option value="">No hay horarios disponibles</option>').prop('disabled', true);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error al cargar horarios:', error);
+                        $('#horario_cita').html('<option value="">Error al cargar horarios</option>').prop('disabled', true);
+                    }
+                });
+            } else {
+                $('#horario_cita').html('<option value="">Seleccione médico y fecha primero</option>').prop('disabled', true);
+            }
+        });
+        
+        // Evento cuando se selecciona un horario
+        $('#horario_cita').on('change', function() {
+            var selectedOption = $(this).find('option:selected');
+            var consultorio = selectedOption.data('consultorio');
+            var horaInicio = selectedOption.data('hora-inicio');
+            var horaFin = selectedOption.data('hora-fin');
+            
+            if (consultorio) {
+                $('#consultorio').val(consultorio);
+                
+                // Si estamos en un formulario de derivación, guardar las horas específicas
+                if ($('#hora_inicio').length > 0 && horaInicio) {
+                    $('#hora_inicio').val(horaInicio);
+                }
+                
+                if ($('#hora_fin').length > 0 && horaFin) {
+                    $('#hora_fin').val(horaFin);
+                }
+                
+                // Guardar en campos ocultos si existen
+                if ($('#hora_inicio_hidden').length > 0 && horaInicio) {
+                    $('#hora_inicio_hidden').val(horaInicio);
+                }
+                
+                if ($('#hora_fin_hidden').length > 0 && horaFin) {
+                    $('#hora_fin_hidden').val(horaFin);
+                }
+            } else {
+                $('#consultorio').val('');
+                
+                // Limpiar campos de hora si existen
+                if ($('#hora_inicio').length > 0) {
+                    $('#hora_inicio').val('');
+                }
+                
+                if ($('#hora_fin').length > 0) {
+                    $('#hora_fin').val('');
+                }
+                
+                if ($('#hora_inicio_hidden').length > 0) {
+                    $('#hora_inicio_hidden').val('');
+                }
+                
+                if ($('#hora_fin_hidden').length > 0) {
+                    $('#hora_fin_hidden').val('');
+                }
             }
         });
     });

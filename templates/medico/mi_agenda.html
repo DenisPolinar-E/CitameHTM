@@ -1,0 +1,586 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Mi Agenda - Hospital Tingo María{% endblock %}
+
+{% block page_title %}Mi Agenda{% endblock %}
+
+{% block extra_css %}
+<style>
+    .agenda-container {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .stats-card {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        padding: 15px;
+        height: 100%;
+        transition: all 0.3s;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .stats-icon {
+        font-size: 2rem;
+        margin-bottom: 10px;
+        color: var(--primary-color);
+    }
+    
+    .stats-number {
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-bottom: 5px;
+    }
+    
+    .stats-label {
+        font-size: 0.9rem;
+        color: #666;
+    }
+    
+    .calendar-header {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 10px;
+        border-radius: 8px 8px 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .calendar-body {
+        padding: 15px;
+    }
+    
+    .calendar-nav {
+        display: flex;
+        align-items: center;
+    }
+    
+    .calendar-nav-btn {
+        background-color: rgba(255,255,255,0.2);
+        border: none;
+        color: white;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 5px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .calendar-nav-btn:hover {
+        background-color: rgba(255,255,255,0.4);
+    }
+    
+    .calendar-date {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin: 0 10px;
+    }
+    
+    .calendar-view-toggle {
+        display: flex;
+    }
+    
+    .calendar-view-btn {
+        background-color: rgba(255,255,255,0.2);
+        border: none;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        margin: 0 5px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .calendar-view-btn.active {
+        background-color: rgba(255,255,255,0.4);
+        font-weight: 600;
+    }
+    
+    .calendar-view-btn:hover {
+        background-color: rgba(255,255,255,0.4);
+    }
+    
+    .day-view {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .time-slot {
+        display: flex;
+        border-bottom: 1px solid #eee;
+        padding: 10px 0;
+    }
+    
+    .time-slot-hour {
+        width: 80px;
+        font-weight: 600;
+        color: #666;
+        text-align: center;
+    }
+    
+    .time-slot-content {
+        flex: 1;
+        padding-left: 15px;
+        border-left: 1px solid #eee;
+    }
+    
+    .appointment-card {
+        background-color: #e3f2fd;
+        border-left: 4px solid #1976d2;
+        padding: 10px;
+        border-radius: 4px;
+        margin-bottom: 10px;
+        transition: all 0.2s;
+    }
+    
+    .appointment-card:hover {
+        box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    
+    .appointment-card.confirmada {
+        background-color: #e3f2fd;
+        border-left-color: #1976d2;
+    }
+    
+    .appointment-card.pendiente {
+        background-color: #fff8e1;
+        border-left-color: #ffa000;
+    }
+    
+    .appointment-card.atendida {
+        background-color: #e8f5e9;
+        border-left-color: #43a047;
+    }
+    
+    .appointment-card.cancelada {
+        background-color: #ffebee;
+        border-left-color: #e53935;
+    }
+    
+    .appointment-time {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #555;
+    }
+    
+    .appointment-patient {
+        font-weight: 600;
+        margin: 5px 0;
+    }
+    
+    .appointment-details {
+        font-size: 0.85rem;
+        color: #666;
+    }
+    
+    .appointment-actions {
+        margin-top: 8px;
+        display: flex;
+        gap: 5px;
+    }
+    
+    .appointment-actions button {
+        padding: 2px 8px;
+        font-size: 0.8rem;
+    }
+    
+    .week-view {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 10px;
+    }
+    
+    .week-day {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .week-day-header {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 8px;
+        text-align: center;
+        font-weight: 600;
+    }
+    
+    .week-day-header.today {
+        background-color: var(--accent-color);
+    }
+    
+    .week-day-body {
+        padding: 10px;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    .week-appointment {
+        background-color: #e3f2fd;
+        border-left: 4px solid #1976d2;
+        padding: 8px;
+        border-radius: 4px;
+        margin-bottom: 8px;
+        font-size: 0.85rem;
+    }
+    
+    .week-appointment.confirmada {
+        background-color: #e3f2fd;
+        border-left-color: #1976d2;
+    }
+    
+    .week-appointment.pendiente {
+        background-color: #fff8e1;
+        border-left-color: #ffa000;
+    }
+    
+    .week-appointment.atendida {
+        background-color: #e8f5e9;
+        border-left-color: #43a047;
+    }
+    
+    .week-appointment.cancelada {
+        background-color: #ffebee;
+        border-left-color: #e53935;
+    }
+    
+    .week-appointment-time {
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+    
+    .week-appointment-patient {
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .no-appointments {
+        text-align: center;
+        padding: 20px;
+        color: #666;
+        font-style: italic;
+    }
+    
+    .next-appointment-card {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 15px;
+        margin-top: 20px;
+        border-left: 4px solid var(--primary-color);
+    }
+    
+    .next-appointment-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    
+    .next-appointment-icon {
+        background-color: var(--primary-color);
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px;
+    }
+    
+    .next-appointment-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .next-appointment-time {
+        color: var(--primary-color);
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin: 10px 0;
+    }
+    
+    .next-appointment-patient {
+        font-weight: 600;
+        margin: 5px 0;
+    }
+    
+    .next-appointment-details {
+        color: #666;
+        margin: 5px 0;
+    }
+    
+    .progress-container {
+        margin-top: 15px;
+    }
+    
+    .progress-label {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+    }
+    
+    .progress-bar {
+        height: 8px;
+        background-color: #e0e0e0;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background-color: var(--primary-color);
+        border-radius: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block sidebar_menu %}
+<a href="{% url 'dashboard_medico' %}" class="menu-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="{% url 'mi_agenda' %}" class="menu-item active"><i class="fas fa-calendar-alt"></i> Mi Agenda</a>
+<!-- Comentamos temporalmente los enlaces a funcionalidades no implementadas -->
+<a href="#" class="menu-item"><i class="fas fa-clock"></i> Gestionar Horario</a>
+<a href="#" class="menu-item"><i class="fas fa-user-md"></i> Atender Pacientes</a>
+<a href="{% url 'historial_medico' %}" class="menu-item"><i class="fas fa-notes-medical"></i> Historial Médico</a>
+<a href="#" class="menu-item"><i class="fas fa-share"></i> Derivar a Especialista</a>
+<a href="#" class="menu-item"><i class="fas fa-calendar-check"></i> Programar Seguimientos</a>
+<a href="{% url 'perfil_medico' %}" class="menu-item"><i class="fas fa-user"></i> Mi Perfil</a>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Estadísticas rápidas -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stats-card text-center">
+                <div class="stats-icon">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="stats-number">{{ estadisticas.total_citas_hoy }}</div>
+                <div class="stats-label">Citas Hoy</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stats-card text-center">
+                <div class="stats-icon">
+                    <i class="fas fa-user-clock"></i>
+                </div>
+                <div class="stats-number">{{ estadisticas.citas_pendientes }}</div>
+                <div class="stats-label">Pendientes</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stats-card text-center">
+                <div class="stats-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stats-number">{{ estadisticas.citas_atendidas_hoy }}</div>
+                <div class="stats-label">Atendidas</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stats-card text-center">
+                <div class="stats-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="stats-number">{{ estadisticas.porcentaje_avance|floatformat:0 }}%</div>
+                <div class="stats-label">Progreso</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Próxima cita -->
+    {% if estadisticas.proxima_cita %}
+    <div class="next-appointment-card mb-4">
+        <div class="next-appointment-header">
+            <div class="next-appointment-icon">
+                <i class="fas fa-user-clock"></i>
+            </div>
+            <h5 class="next-appointment-title">Próxima Cita</h5>
+        </div>
+        <div class="next-appointment-time">
+            <i class="far fa-clock me-2"></i> {{ estadisticas.proxima_cita.hora_inicio|time:"H:i" }} - {{ estadisticas.proxima_cita.hora_fin|time:"H:i" }}
+        </div>
+        <div class="next-appointment-patient">
+            <i class="fas fa-user me-2"></i> {{ estadisticas.proxima_cita.paciente.usuario.nombres }} {{ estadisticas.proxima_cita.paciente.usuario.apellidos }}
+        </div>
+        <div class="next-appointment-details">
+            <i class="fas fa-stethoscope me-2"></i> {{ estadisticas.proxima_cita.motivo|truncatechars:100 }}
+        </div>
+        <div class="next-appointment-details">
+            <i class="fas fa-info-circle me-2"></i> Estado: <span class="badge bg-{{ estadisticas.proxima_cita.estado }}">{{ estadisticas.proxima_cita.estado|title }}</span>
+        </div>
+        <div class="progress-container">
+            <div class="progress-label">
+                <span>Progreso del día</span>
+                <span>{{ estadisticas.citas_atendidas_hoy }} de {{ estadisticas.total_citas_hoy }}</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: {{ estadisticas.porcentaje_avance }}%"></div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Calendario -->
+    <div class="agenda-container">
+        <div class="calendar-header">
+            <div class="calendar-nav">
+                <form id="fechaForm" method="GET" action="{% url 'mi_agenda' %}">
+                    <input type="hidden" id="fechaInput" name="fecha" value="{{ fecha_actual|date:'Y-m-d' }}">
+                </form>
+                <button class="calendar-nav-btn" onclick="cambiarFecha(-1)">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="calendar-date">{{ fecha_actual|date:"d F, Y" }}</div>
+                <button class="calendar-nav-btn" onclick="cambiarFecha(1)">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                <button class="calendar-nav-btn" onclick="irAHoy()">
+                    <i class="fas fa-calendar-day"></i>
+                </button>
+            </div>
+            <div class="calendar-view-toggle">
+                <button class="calendar-view-btn active" id="btnDayView">Día</button>
+                <button class="calendar-view-btn" id="btnWeekView">Semana</button>
+            </div>
+        </div>
+        <div class="calendar-body">
+            <!-- Vista diaria -->
+            <div class="day-view" id="dayView">
+                {% if eventos_dia %}
+                    {% regroup eventos_dia by hora_inicio|time:"H:i" as eventos_por_hora %}
+                    {% for hora, eventos in eventos_por_hora %}
+                    <div class="time-slot">
+                        <div class="time-slot-hour">{{ hora }}</div>
+                        <div class="time-slot-content">
+                            {% for cita in eventos %}
+                            <div class="appointment-card {{ cita.estado }}">
+                                <div class="appointment-time">{{ cita.hora_inicio|time:"H:i" }} - {{ cita.hora_fin|time:"H:i" }}</div>
+                                <div class="appointment-patient">{{ cita.paciente.usuario.nombres }} {{ cita.paciente.usuario.apellidos }}</div>
+                                <div class="appointment-details">
+                                    <strong>Motivo:</strong> {{ cita.motivo|truncatechars:50 }}
+                                </div>
+                                <div class="appointment-details">
+                                    <strong>Estado:</strong> <span class="badge bg-{{ cita.estado }}">{{ cita.estado|title }}</span>
+                                </div>
+                                <div class="appointment-actions">
+                                    <a href="#" class="btn btn-sm btn-primary">Atender</a>
+                                    <a href="{% url 'historial_medico' %}?paciente_id={{ cita.paciente.id }}" class="btn btn-sm btn-info">Historial</a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="no-appointments">
+                    <i class="fas fa-calendar-times mb-3" style="font-size: 3rem; color: #ccc;"></i>
+                    <p>No hay citas programadas para este día.</p>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Vista semanal -->
+            <div class="week-view" id="weekView" style="display: none;">
+                {% for dia in dias_semana %}
+                <div class="week-day">
+                    <div class="week-day-header {% if dia.es_hoy %}today{% endif %}">
+                        {{ dia.nombre }} <br>
+                        <small>{{ dia.fecha|date:"d/m" }}</small>
+                    </div>
+                    <div class="week-day-body">
+                        {% with eventos_dia=eventos_semana|get_item:dia.fecha %}
+                            {% if eventos_dia %}
+                                {% for cita in eventos_dia %}
+                                <div class="week-appointment {{ cita.estado }}">
+                                    <div class="week-appointment-time">{{ cita.hora_inicio|time:"H:i" }}</div>
+                                    <div class="week-appointment-patient">{{ cita.paciente.usuario.nombres }} {{ cita.paciente.usuario.apellidos }}</div>
+                                    <div class="appointment-actions mt-1">
+                                        <a href="#" class="btn btn-sm btn-primary">Atender</a>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center text-muted py-3">
+                                    <small>Sin citas</small>
+                                </div>
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Cambiar entre vista diaria y semanal
+        const btnDayView = document.getElementById('btnDayView');
+        const btnWeekView = document.getElementById('btnWeekView');
+        const dayView = document.getElementById('dayView');
+        const weekView = document.getElementById('weekView');
+        
+        btnDayView.addEventListener('click', function() {
+            dayView.style.display = 'flex';
+            weekView.style.display = 'none';
+            btnDayView.classList.add('active');
+            btnWeekView.classList.remove('active');
+        });
+        
+        btnWeekView.addEventListener('click', function() {
+            dayView.style.display = 'none';
+            weekView.style.display = 'grid';
+            btnDayView.classList.remove('active');
+            btnWeekView.classList.add('active');
+        });
+    });
+    
+    // Funciones para navegación de fechas
+    function cambiarFecha(dias) {
+        const fechaInput = document.getElementById('fechaInput');
+        const fechaActual = new Date(fechaInput.value);
+        fechaActual.setDate(fechaActual.getDate() + dias);
+        
+        // Formatear fecha como YYYY-MM-DD
+        const year = fechaActual.getFullYear();
+        const month = String(fechaActual.getMonth() + 1).padStart(2, '0');
+        const day = String(fechaActual.getDate()).padStart(2, '0');
+        
+        fechaInput.value = `${year}-${month}-${day}`;
+        document.getElementById('fechaForm').submit();
+    }
+    
+    function irAHoy() {
+        const fechaHoy = new Date();
+        const year = fechaHoy.getFullYear();
+        const month = String(fechaHoy.getMonth() + 1).padStart(2, '0');
+        const day = String(fechaHoy.getDate()).padStart(2, '0');
+        
+        document.getElementById('fechaInput').value = `${year}-${month}-${day}`;
+        document.getElementById('fechaForm').submit();
+    }
+</script>
+{% endblock %}

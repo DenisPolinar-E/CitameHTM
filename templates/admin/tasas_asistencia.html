@@ -1,0 +1,205 @@
+{% extends "dashboard/base_dashboard.html" %}
+
+{% load static %}
+
+{% block title %}Tasas de Asistencia{% endblock %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="{% static 'css/jquery-ui.min.css' %}">
+<style>
+    .metric-card {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+        transition: transform 0.3s ease;
+    }
+    .metric-card:hover {
+        transform: translateY(-5px);
+    }
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #4e73df;
+    }
+    .metric-label {
+        font-size: 1rem;
+        color: #858796;
+    }
+    .recovery-high {
+        color: #1cc88a;
+    }
+    .recovery-medium {
+        color: #f6c23e;
+    }
+    .recovery-low {
+        color: #e74a3b;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Título de página -->
+    <h1 class="h3 mb-2 text-gray-800">Tasas de Asistencia</h1>
+    <p class="mb-4">Análisis de asistencia y recuperación de citas médicas.</p>
+
+    <!-- Filtros -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Filtros</h6>
+        </div>
+        <div class="card-body">
+            <form id="filtro-form" method="GET">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="fecha_inicio">Fecha inicio:</label>
+                            <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="fecha_fin">Fecha fin:</label>
+                            <input type="date" class="form-control" id="fecha_fin" name="fecha_fin">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="especialidad">Especialidad:</label>
+                            <select class="form-control" id="especialidad" name="especialidad">
+                                <option value="0">Todas</option>
+                                {% for especialidad in especialidades %}
+                                <option value="{{ especialidad.id }}">{{ especialidad.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="medico">Médico:</label>
+                            <select class="form-control" id="medico" name="medico">
+                                <option value="0">Todos</option>
+                                <!-- Los médicos se cargarán dinámicamente según la especialidad -->
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" id="btn-aplicar-filtro" class="btn btn-primary">
+                    <i class="fas fa-filter mr-1"></i> Aplicar Filtro
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Métricas Principales -->
+    <div class="row" id="metricas-container">
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card">
+                <div class="metric-value" id="tasa-asistencia">0%</div>
+                <div class="metric-label">Tasa de Asistencia</div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card">
+                <div class="metric-value" id="tasa-inasistencia">0%</div>
+                <div class="metric-label">Tasa de Inasistencia</div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card">
+                <div class="metric-value" id="tasa-cancelacion">0%</div>
+                <div class="metric-label">Tasa de Cancelación</div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card">
+                <div class="metric-value" id="tasa-recuperacion">0%</div>
+                <div class="metric-label">Tasa de Recuperación</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráfico de Recuperación -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Evolución de Tasas</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="position: relative; height:50vh;">
+                        <canvas id="graficoEvolucion"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Resumen de Recuperación</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" id="tabla-recuperacion">
+                            <thead>
+                                <tr>
+                                    <th>Tipo</th>
+                                    <th>Cantidad</th>
+                                    <th>Porcentaje</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Inasistencias Totales</td>
+                                    <td id="inasistencias-total">0</td>
+                                    <td>100%</td>
+                                </tr>
+                                <tr>
+                                    <td>Recuperadas</td>
+                                    <td id="inasistencias-recuperadas">0</td>
+                                    <td id="porcentaje-recuperadas">0%</td>
+                                </tr>
+                                <tr>
+                                    <td>No Recuperadas</td>
+                                    <td id="inasistencias-no-recuperadas">0</td>
+                                    <td id="porcentaje-no-recuperadas">0%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Interpretación de resultados -->
+                    <div class="mt-3 p-3 bg-light rounded" id="interpretacion-container">
+                        <h6 class="font-weight-bold">Interpretación:</h6>
+                        <p id="interpretacion-texto" class="mb-0 text-muted font-italic">
+                            Aplique filtros para ver la interpretación de los resultados.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/jquery-ui.min.js' %}"></script>
+<!-- Cargar Chart.js local -->
+<script src="{% static 'js/chart.min.js' %}"></script>
+<!-- Verificar que Chart.js se cargó correctamente -->
+<script>
+    // Verificar que Chart.js esté disponible
+    if (typeof Chart === 'undefined') {
+        console.error('ERROR: Chart.js no se ha cargado correctamente desde el archivo local!');
+        alert('Error al cargar Chart.js local. Por favor contacte al administrador.');
+    } else {
+        console.log('Chart.js cargado correctamente desde archivo local, versión:', Chart.version || 'desconocida');
+    }
+</script>
+<!-- Cargar el script personalizado después de Chart.js -->
+<script src="{% static 'js/tasas_asistencia.js' %}"></script>
+{% endblock %}

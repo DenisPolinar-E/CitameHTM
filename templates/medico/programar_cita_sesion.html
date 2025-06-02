@@ -1,0 +1,275 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Programar Cita para Sesión - Médico{% endblock %}
+
+{% block page_title %}Programar Cita para Sesión{% endblock %}
+
+{% block sidebar_menu %}
+<a href="{% url 'dashboard_medico' %}" class="menu-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="{% url 'agenda_medico' %}" class="menu-item"><i class="fas fa-calendar-alt"></i> Mi Agenda</a>
+<a href="{% url 'gestion_citas' %}" class="menu-item"><i class="fas fa-calendar-check"></i> Gestión de Citas</a>
+<a href="{% url 'historial_medico' %}" class="menu-item"><i class="fas fa-file-medical-alt"></i> Historial Médico</a>
+<a href="{% url 'ver_seguimientos' %}" class="menu-item active"><i class="fas fa-clipboard-list"></i> Seguimientos</a>
+<a href="{% url 'programar_seguimientos' %}" class="menu-item"><i class="fas fa-calendar-plus"></i> Programar Seguimiento</a>
+<a href="{% url 'perfil_medico' %}" class="menu-item"><i class="fas fa-user-md"></i> Mi Perfil</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .card-header {
+        border-radius: 10px 10px 0 0 !important;
+        font-weight: 600;
+    }
+    .info-box {
+        background-color: #e3f2fd;
+        border-left: 4px solid #1976d2;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+    }
+    .session-info {
+        background-color: #f5f5f5;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .session-number {
+        font-weight: 600;
+        color: #1976d2;
+    }
+    .time-slot {
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 1px solid #e0e0e0;
+        border-radius: 5px;
+        padding: 8px;
+        margin-bottom: 5px;
+        text-align: center;
+    }
+    .time-slot:hover {
+        background-color: #e3f2fd;
+        border-color: #1976d2;
+    }
+    .time-slot.selected {
+        background-color: #1976d2;
+        color: white;
+        border-color: #1976d2;
+    }
+    .time-slots-container {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'ver_seguimientos' %}">Seguimientos</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'detalle_seguimiento' sesion.tratamiento.id %}">Detalle de Tratamiento</a></li>
+                    <li class="breadcrumb-item active">Programar Cita</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-calendar-plus me-2"></i> Programar Cita para Sesión
+                </div>
+                <div class="card-body">
+                    <div class="session-info mb-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>Información de la Sesión</h5>
+                                <p><strong>Paciente:</strong> {{ sesion.tratamiento.paciente.usuario.nombres }} {{ sesion.tratamiento.paciente.usuario.apellidos }}</p>
+                                <p><strong>Médico:</strong> Dr. {{ sesion.tratamiento.medico.usuario.nombres }} {{ sesion.tratamiento.medico.usuario.apellidos }}</p>
+                                <p><strong class="session-number">Sesión {{ sesion.numero_sesion }} de {{ sesion.tratamiento.cantidad_sesiones }}</strong></p>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Detalles del Tratamiento</h5>
+                                <p><strong>Diagnóstico:</strong> {{ sesion.tratamiento.diagnostico|truncatechars:100 }}</p>
+                                <p><strong>Fecha sugerida:</strong> {{ sesion.fecha_programada|date:"d/m/Y" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="fecha" class="form-label">Fecha de la cita</label>
+                            <input type="date" id="fecha" name="fecha" class="form-control" value="{{ fecha_sugerida|date:'Y-m-d' }}" min="{{ fecha_sugerida|date:'Y-m-d' }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="consultorio" class="form-label">Consultorio</label>
+                            <select id="consultorio" name="consultorio" class="form-select" required>
+                                <option value="">Seleccione un consultorio</option>
+                                {% for consultorio in consultorios %}
+                                    <option value="{{ consultorio.id }}">{{ consultorio.codigo }} - {{ consultorio.area }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Hora de inicio</label>
+                            <div class="time-slots-container">
+                                <div class="row" id="timeSlots">
+                                    <!-- Los horarios se cargarán dinámicamente -->
+                                    <div class="col-12 text-center py-3">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Cargando...</span>
+                                        </div>
+                                        <p class="mt-2">Seleccione una fecha y consultorio para ver horarios disponibles</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <input type="hidden" id="hora_inicio" name="hora_inicio" required>
+                        </div>
+                        
+                        <div class="mt-4 d-flex justify-content-between">
+                            <a href="{% url 'detalle_seguimiento' sesion.tratamiento.id %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                                <i class="fas fa-save me-2"></i> Programar Cita
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-info-circle me-2"></i> Información
+                </div>
+                <div class="card-body">
+                    <h5>Programación de Citas</h5>
+                    <p>Está programando una cita para la sesión {{ sesion.numero_sesion }} del tratamiento del paciente {{ sesion.tratamiento.paciente.usuario.nombres }} {{ sesion.tratamiento.paciente.usuario.apellidos }}.</p>
+                    
+                    <h5 class="mt-3">Recomendaciones:</h5>
+                    <ul>
+                        <li>Intente programar la cita en la fecha sugerida o lo más cercana posible</li>
+                        <li>Verifique la disponibilidad del consultorio</li>
+                        <li>Seleccione un horario conveniente para el paciente</li>
+                    </ul>
+                    
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Importante:</strong> Una vez programada la cita, se notificará automáticamente al paciente.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const fechaInput = document.getElementById('fecha');
+        const consultorioSelect = document.getElementById('consultorio');
+        const horaInicioInput = document.getElementById('hora_inicio');
+        const submitBtn = document.getElementById('submitBtn');
+        const timeSlotsContainer = document.getElementById('timeSlots');
+        
+        // Función para cargar horarios disponibles
+        function cargarHorarios() {
+            const fecha = fechaInput.value;
+            const consultorioId = consultorioSelect.value;
+            
+            if (!fecha || !consultorioId) {
+                return;
+            }
+            
+            // Mostrar spinner de carga
+            timeSlotsContainer.innerHTML = `
+                <div class="col-12 text-center py-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <p class="mt-2">Cargando horarios disponibles...</p>
+                </div>
+            `;
+            
+            // Simulación de horarios disponibles (en un sistema real, esto sería una llamada AJAX)
+            setTimeout(() => {
+                // Generar horarios de ejemplo (8:00 AM a 5:00 PM)
+                const horarios = [];
+                for (let hora = 8; hora <= 17; hora++) {
+                    // Excluir la hora de almuerzo (12-13)
+                    if (hora !== 12) {
+                        horarios.push(`${hora.toString().padStart(2, '0')}:00`);
+                        if (hora !== 17) { // No agregar 17:30
+                            horarios.push(`${hora.toString().padStart(2, '0')}:30`);
+                        }
+                    }
+                }
+                
+                // Mostrar horarios
+                timeSlotsContainer.innerHTML = '';
+                
+                if (horarios.length > 0) {
+                    horarios.forEach(horario => {
+                        const col = document.createElement('div');
+                        col.className = 'col-md-3 col-6 mb-2';
+                        
+                        const timeSlot = document.createElement('div');
+                        timeSlot.className = 'time-slot';
+                        timeSlot.textContent = horario;
+                        timeSlot.dataset.value = horario;
+                        
+                        timeSlot.addEventListener('click', function() {
+                            // Desseleccionar todos los slots
+                            document.querySelectorAll('.time-slot').forEach(slot => {
+                                slot.classList.remove('selected');
+                            });
+                            
+                            // Seleccionar este slot
+                            this.classList.add('selected');
+                            
+                            // Actualizar el valor del input oculto
+                            horaInicioInput.value = this.dataset.value;
+                            
+                            // Habilitar el botón de envío
+                            submitBtn.disabled = false;
+                        });
+                        
+                        col.appendChild(timeSlot);
+                        timeSlotsContainer.appendChild(col);
+                    });
+                } else {
+                    timeSlotsContainer.innerHTML = `
+                        <div class="col-12 text-center py-3">
+                            <p class="text-danger">No hay horarios disponibles para la fecha seleccionada.</p>
+                        </div>
+                    `;
+                }
+            }, 1000);
+        }
+        
+        // Eventos para cargar horarios cuando cambian fecha o consultorio
+        fechaInput.addEventListener('change', cargarHorarios);
+        consultorioSelect.addEventListener('change', cargarHorarios);
+        
+        // Establecer fecha mínima como hoy
+        const today = new Date();
+        const formattedDate = today.toISOString().split('T')[0];
+        fechaInput.min = formattedDate;
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,684 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Gestión de Citas - Hospital Tingo María{% endblock %}
+
+{% block page_title %}Gestión de Citas{% endblock %}
+
+{% block sidebar_menu %}
+<a href="{% url 'dashboard_medico' %}" class="menu-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="{% url 'gestion_citas' %}" class="menu-item active"><i class="fas fa-calendar-check"></i> Gestión de Citas</a>
+<a href="{% url 'disponibilidad_medica' %}" class="menu-item"><i class="fas fa-clock"></i> Gestionar Horario</a>
+<a href="{% url 'historial_medico' %}" class="menu-item"><i class="fas fa-file-medical-alt"></i> Historial Médico</a>
+<a href="{% url 'perfil_medico' %}" class="menu-item"><i class="fas fa-user-md"></i> Mi Perfil</a>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Filtros y Búsqueda -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-sm btn-primary filter-btn active" data-filter="all">
+                            <i class="fas fa-th-list me-1"></i> Todas
+                            <span class="badge bg-white text-primary ms-1">{{ total_citas }}</span>
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary filter-btn" data-filter="regular">
+                            <i class="fas fa-calendar me-1"></i> Regulares
+                            <span class="badge bg-light text-primary ms-1">{{ citas_regulares }}</span>
+                        </button>
+                        <button class="btn btn-sm btn-outline-success filter-btn" data-filter="derivacion">
+                            <i class="fas fa-exchange-alt me-1"></i> Por Derivación
+                            <span class="badge bg-light text-success ms-1">{{ citas_derivacion }}</span>
+                        </button>
+                        <button class="btn btn-sm btn-outline-info filter-btn" data-filter="hoy">
+                            <i class="fas fa-calendar-day me-1"></i> Hoy
+                            <span class="badge bg-light text-info ms-1">{{ citas_hoy }}</span>
+                        </button>
+                        <button class="btn btn-sm btn-outline-warning filter-btn" data-filter="pendiente">
+                            <i class="fas fa-clock me-1"></i> Pendientes
+                            <span class="badge bg-light text-warning ms-1">{{ citas_pendientes }}</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="Buscar paciente..." id="searchInput">
+                        <button class="btn btn-outline-secondary" type="button">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pestañas para diferentes vistas -->
+    <ul class="nav nav-tabs mb-4" id="citasTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="vista-general-tab" data-bs-toggle="tab" data-bs-target="#vista-general" type="button" role="tab" aria-controls="vista-general" aria-selected="true">
+                <i class="fas fa-table me-1"></i> Vista General
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="calendario-tab" data-bs-toggle="tab" data-bs-target="#calendario" type="button" role="tab" aria-controls="calendario" aria-selected="false">
+                <i class="fas fa-calendar-alt me-1"></i> Calendario
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="analisis-tab" data-bs-toggle="tab" data-bs-target="#analisis" type="button" role="tab" aria-controls="analisis" aria-selected="false">
+                <i class="fas fa-chart-bar me-1"></i> Análisis
+            </button>
+        </li>
+    </ul>
+
+    <!-- Contenido de las pestañas -->
+    <div class="tab-content" id="citasTabsContent">
+        <!-- Vista General -->
+        <div class="tab-pane fade show active" id="vista-general" role="tabpanel" aria-labelledby="vista-general-tab">
+            <div class="card">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Paciente</th>
+                                    <th>Fecha</th>
+                                    <th>Hora</th>
+                                    <th>Tipo</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="citasTableBody">
+                                {% for cita in citas %}
+                                <tr class="cita-row {% if cita.derivacion %}table-row-derivacion{% endif %}" data-tipo="{% if cita.derivacion %}derivacion{% else %}regular{% endif %}" data-estado="{{ cita.estado }}">
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar me-2">
+                                                {% if cita.paciente.usuario.foto_perfil %}
+                                                <img src="{{ cita.paciente.usuario.foto_perfil.url }}" alt="Avatar" class="rounded-circle" width="40">
+                                                {% else %}
+                                                <div class="avatar-placeholder">
+                                                    {{ cita.paciente.usuario.nombres|first }}{{ cita.paciente.usuario.apellidos|first }}
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0">{{ cita.paciente.usuario.nombres }} {{ cita.paciente.usuario.apellidos }}</h6>
+                                                <small class="text-muted">DNI: {{ cita.paciente.usuario.dni }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ cita.fecha|date:"d/m/Y" }}</td>
+                                    <td>{{ cita.hora_inicio|time:"H:i" }} - {{ cita.hora_fin|time:"H:i" }}</td>
+                                    <td>
+                                        {% if cita.derivacion %}
+                                        <span class="badge bg-success-subtle text-success">
+                                            <i class="fas fa-exchange-alt me-1"></i> Derivación
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-primary-subtle text-primary">
+                                            <i class="fas fa-calendar me-1"></i> Regular
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if cita.estado == 'pendiente' %}
+                                        <span class="badge bg-warning-subtle text-warning">Pendiente</span>
+                                        {% elif cita.estado == 'confirmada' %}
+                                        <span class="badge bg-info-subtle text-info">Confirmada</span>
+                                        {% elif cita.estado == 'atendida' %}
+                                        <span class="badge bg-success-subtle text-success">Atendida</span>
+                                        {% elif cita.estado == 'cancelada' %}
+                                        <span class="badge bg-danger-subtle text-danger">Cancelada</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-ellipsis-v"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <li><a class="dropdown-item" href="{% url 'atender_paciente' cita.id %}"><i class="fas fa-stethoscope me-2"></i>Atender</a></li>
+                                                <li><a class="dropdown-item" href="{% url 'historial_medico' %}?paciente_id={{ cita.paciente.id }}"><i class="fas fa-file-medical me-2"></i>Ver Historial</a></li>
+                                                {% if cita.derivacion %}
+                                                <li><a class="dropdown-item" href="{% url 'ver_derivaciones' %}?id={{ cita.derivacion.id }}"><i class="fas fa-exchange-alt me-2"></i>Ver Derivación</a></li>
+                                                {% endif %}
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li><a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#cancelarCitaModal" data-cita-id="{{ cita.id }}"><i class="fas fa-times-circle me-2"></i>Cancelar</a></li>
+                                            </ul>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-4">
+                                        <div class="empty-state">
+                                            <i class="fas fa-calendar-times empty-state-icon"></i>
+                                            <h5>No hay citas disponibles</h5>
+                                            <p class="text-muted">No se encontraron citas que coincidan con los criterios de búsqueda.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-white">
+                    <nav aria-label="Paginación de citas">
+                        <ul class="pagination justify-content-center mb-0">
+                            {% if citas.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1" aria-label="Primera">
+                                    <span aria-hidden="true">&laquo;&laquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ citas.previous_page_number }}" aria-label="Anterior">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">&laquo;&laquo;</span>
+                            </li>
+                            <li class="page-item disabled">
+                                <span class="page-link">&laquo;</span>
+                            </li>
+                            {% endif %}
+                            
+                            {% for i in citas.paginator.page_range %}
+                                {% if citas.number == i %}
+                                <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                                {% elif i > citas.number|add:'-3' and i < citas.number|add:'3' %}
+                                <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if citas.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ citas.next_page_number }}" aria-label="Siguiente">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ citas.paginator.num_pages }}" aria-label="Última">
+                                    <span aria-hidden="true">&raquo;&raquo;</span>
+                                </a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">&raquo;</span>
+                            </li>
+                            <li class="page-item disabled">
+                                <span class="page-link">&raquo;&raquo;</span>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Vista Calendario -->
+        <div class="tab-pane fade" id="calendario" role="tabpanel" aria-labelledby="calendario-tab">
+            <div class="card">
+                <div class="card-body">
+                    <div id="calendar"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Vista Análisis -->
+        <div class="tab-pane fade" id="analisis" role="tabpanel" aria-labelledby="analisis-tab">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Distribución por Tipo</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="chartTipoCitas" height="250"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Tendencia Mensual</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="chartTendencia" height="250"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Análisis de Derivaciones</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <canvas id="chartEspecialidades" height="300"></canvas>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Especialidad</th>
+                                                    <th>Derivaciones</th>
+                                                    <th>Tiempo Promedio (días)</th>
+                                                    <th>Tasa de Atención</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for especialidad in estadisticas_especialidades %}
+                                                <tr>
+                                                    <td>{{ especialidad.nombre }}</td>
+                                                    <td>{{ especialidad.derivaciones }}</td>
+                                                    <td>{{ especialidad.tiempo_promedio }}</td>
+                                                    <td>
+                                                        <div class="progress" style="height: 6px;">
+                                                            <div class="progress-bar" role="progressbar" style="width: {{ especialidad.tasa_atencion }}%;" aria-valuenow="{{ especialidad.tasa_atencion }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                                        </div>
+                                                        <small>{{ especialidad.tasa_atencion }}%</small>
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para cancelar cita -->
+<div class="modal fade" id="cancelarCitaModal" tabindex="-1" aria-labelledby="cancelarCitaModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cancelarCitaModalLabel">Cancelar Cita</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Está seguro que desea cancelar esta cita? Esta acción no se puede deshacer.</p>
+                <form id="cancelarCitaForm" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="cita_id" id="cancelarCitaId">
+                    <div class="mb-3">
+                        <label for="motivo_cancelacion" class="form-label">Motivo de cancelación</label>
+                        <textarea class="form-control" id="motivo_cancelacion" name="motivo_cancelacion" rows="3" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmarCancelacion">Confirmar Cancelación</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- FullCalendar JS -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/locales/es.js"></script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+<script>
+    // Variables inicializadas con datos de Django para evitar errores
+    const datosDistribucion = {
+        regulares: {% if datos_distribucion.regulares %}{{ datos_distribucion.regulares }}{% else %}0{% endif %},
+        derivacion: {% if datos_distribucion.derivacion %}{{ datos_distribucion.derivacion }}{% else %}0{% endif %}
+    };
+    
+    // Datos para el gráfico de tendencia mensual
+    const datosTendencia = {
+        meses: {{ datos_tendencia.meses|default:"['Sin datos']" | safe }},
+        cantidades: {{ datos_tendencia.cantidades|default:"[0]" | safe }}
+    };
+    
+    document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar filtros
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const citasRows = document.querySelectorAll('.cita-row');
+    
+    filterButtons.forEach(function(button) {
+        button.addEventListener('click', function() {
+            const filter = this.getAttribute('data-filter');
+            
+            // Actualizar estado activo de los botones
+            filterButtons.forEach(function(btn) {
+                btn.classList.remove('active');
+            });
+            this.classList.add('active');
+            
+            // Filtrar citas según el tipo seleccionado
+            citasRows.forEach(function(row) {
+                if (filter === 'all') {
+                    row.style.display = '';
+                } else if (filter === 'regular' && row.getAttribute('data-tipo') === 'regular') {
+                    row.style.display = '';
+                } else if (filter === 'derivacion' && row.getAttribute('data-tipo') === 'derivacion') {
+                    row.style.display = '';
+                } else if (filter === 'hoy') {
+                    // Lógica para filtrar citas de hoy
+                    const fechaCell = row.querySelector('td:nth-child(2)');
+                    if (!fechaCell) return;
+                    const fechaCita = new Date(fechaCell.textContent.split('/').reverse().join('-'));
+                    const hoy = new Date();
+                    if (fechaCita.toDateString() === hoy.toDateString()) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                } else if (filter === 'pendiente' && row.getAttribute('data-estado') === 'pendiente') {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    });
+    
+    // Inicializar búsqueda
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function() {
+            const searchTerm = this.value.toLowerCase();
+            
+            citasRows.forEach(function(row) {
+                const pacienteCell = row.querySelector('td:first-child');
+                if (!pacienteCell) return;
+                const pacienteNombre = pacienteCell.textContent.toLowerCase();
+                if (pacienteNombre.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    }
+    
+    // Inicializar calendario
+    const calendarEl = document.getElementById('calendar');
+    if (calendarEl) {
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            locale: 'es',
+            events: [
+                {% if todas_citas %}
+                    {% for cita in todas_citas %}
+                        {
+                            title: '{{ cita.paciente.usuario.nombres|default:"Paciente" }} {{ cita.paciente.usuario.apellidos|default:"" }}',
+                            start: '{% if cita.fecha and cita.hora_inicio %}{{ cita.fecha|date:"Y-m-d" }}T{{ cita.hora_inicio|time:"H:i:s" }}{% else %}{{ now|date:"Y-m-d" }}T00:00:00{% endif %}',
+                            end: '{% if cita.fecha and cita.hora_fin %}{{ cita.fecha|date:"Y-m-d" }}T{{ cita.hora_fin|time:"H:i:s" }}{% else %}{{ now|date:"Y-m-d" }}T01:00:00{% endif %}',
+                            url: '{% url "atender_paciente" cita_id=cita.id %}',
+                            backgroundColor: '{% if cita.derivacion %}#4caf50{% else %}#2196f3{% endif %}',
+                            borderColor: '{% if cita.derivacion %}#388e3c{% else %}#1976d2{% endif %}',
+                            textColor: 'white'
+                        }{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                {% else %}
+                    {
+                        title: 'No hay citas disponibles',
+                        start: '{{ now|date:"Y-m-d" }}T00:00:00',
+                        end: '{{ now|date:"Y-m-d" }}T01:00:00',
+                        backgroundColor: '#9e9e9e',
+                        borderColor: '#757575',
+                        textColor: 'white'
+                    }
+                {% endif %}
+            ],
+            eventClick: function(info) {
+                if (info.event.url) {
+                    window.location.href = info.event.url;
+                    return false;
+                }
+            }
+        });
+        calendar.render();
+    }
+    
+    // Inicializar gráficos
+    const ctxDistribucion = document.getElementById('chartDistribucion');
+    if (ctxDistribucion) {
+        new Chart(ctxDistribucion, {
+            type: 'doughnut',
+            data: {
+                labels: ['Regulares', 'Por Derivación'],
+                datasets: [{
+                    data: [datosDistribucion.regulares, datosDistribucion.derivacion],
+                    backgroundColor: ['#2196f3', '#4caf50'],
+                    borderColor: ['#1976d2', '#388e3c']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+    
+    // Inicializar gráficos
+    const ctxTipoCitas = document.getElementById('chartTipoCitas');
+    if (ctxTipoCitas) {
+        new Chart(ctxTipoCitas, {
+            type: 'doughnut',
+            data: {
+                labels: ['Citas Regulares', 'Citas por Derivación'],
+                datasets: [{
+                    data: [{{ citas_regulares|default:0 }}, {{ citas_derivacion|default:0 }}],
+                    backgroundColor: ['#2196f3', '#4caf50'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+    
+    const ctxTendencia = document.getElementById('chartTendencia');
+    if (ctxTendencia) {
+        new Chart(ctxTendencia, {
+            type: 'line',
+            data: {
+                labels: datosTendencia.meses,
+                datasets: [{
+                    label: 'Citas por mes',
+                    data: datosTendencia.cantidades,
+                    borderColor: '#2196f3',
+                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+    
+    const ctxEspecialidades = document.getElementById('chartEspecialidades');
+    if (ctxEspecialidades) {
+        new Chart(ctxEspecialidades, {
+            type: 'bar',
+            data: {
+                labels: [{% for esp in estadisticas_especialidades %}'{{ esp.nombre|default:"Sin nombre" }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'Derivaciones por Especialidad',
+                    data: [{% for esp in estadisticas_especialidades %}{{ esp.derivaciones|default:0 }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    backgroundColor: 'rgba(156, 39, 176, 0.7)',
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+    
+    // Modal de cancelación
+    const cancelarCitaModal = document.getElementById('cancelarCitaModal');
+    if (cancelarCitaModal) {
+        cancelarCitaModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const citaId = button ? button.getAttribute('data-cita-id') : '';
+            const cancelarCitaIdInput = document.getElementById('cancelarCitaId');
+            if (cancelarCitaIdInput && citaId) {
+                cancelarCitaIdInput.value = citaId;
+            }
+        });
+        
+        document.getElementById('btnConfirmarCancelacion').addEventListener('click', function() {
+            const cancelarCitaForm = document.getElementById('cancelarCitaForm');
+            const citaId = document.getElementById('cancelarCitaId').value;
+            if (cancelarCitaForm && citaId) {
+                // Establecer la acción del formulario con el ID de la cita
+                cancelarCitaForm.action = `/citas/cancelar/${citaId}/`;
+                cancelarCitaForm.submit();
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.css" rel="stylesheet">
+<style>
+    /* Estilos para la página de gestión de citas */
+    .filter-btn {
+        border-radius: 20px;
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    .filter-btn .badge {
+        font-size: 0.75rem;
+    }
+    
+    .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .avatar-placeholder {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: #e3f2fd;
+        color: #1976d2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+    
+    .table-row-derivacion {
+        background-color: rgba(76, 175, 80, 0.05);
+    }
+    
+    .empty-state {
+        padding: 2rem;
+        text-align: center;
+    }
+    
+    .empty-state-icon {
+        font-size: 3rem;
+        color: #ccc;
+        margin-bottom: 1rem;
+    }
+    
+    /* Estilos para badges */
+    .bg-primary-subtle {
+        background-color: rgba(33, 150, 243, 0.15);
+    }
+    
+    .bg-success-subtle {
+        background-color: rgba(76, 175, 80, 0.15);
+    }
+    
+    .bg-warning-subtle {
+        background-color: rgba(255, 152, 0, 0.15);
+    }
+    
+    .bg-danger-subtle {
+        background-color: rgba(244, 67, 54, 0.15);
+    }
+    
+    .bg-info-subtle {
+        background-color: rgba(3, 169, 244, 0.15);
+    }
+    
+    /* Estilos para calendario */
+    #calendar {
+        height: 650px;
+    }
+    
+    .fc-event {
+        cursor: pointer;
+    }
+    
+    /* Estilos para gráficos */
+    canvas {
+        max-width: 100%;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,231 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Programar Seguimiento - Médico{% endblock %}
+
+{% block page_title %}Programar Tratamiento con Seguimiento{% endblock %}
+
+{% block sidebar_menu %}
+<a href="{% url 'dashboard_medico' %}" class="menu-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="{% url 'agenda_medico' %}" class="menu-item"><i class="fas fa-calendar-alt"></i> Mi Agenda</a>
+<a href="{% url 'gestion_citas' %}" class="menu-item"><i class="fas fa-calendar-check"></i> Gestión de Citas</a>
+<a href="{% url 'historial_medico' %}" class="menu-item"><i class="fas fa-file-medical-alt"></i> Historial Médico</a>
+<a href="{% url 'ver_seguimientos' %}" class="menu-item"><i class="fas fa-clipboard-list"></i> Seguimientos</a>
+<a href="{% url 'programar_seguimientos' %}" class="menu-item active"><i class="fas fa-calendar-plus"></i> Programar Seguimiento</a>
+<a href="{% url 'perfil_medico' %}" class="menu-item"><i class="fas fa-user-md"></i> Mi Perfil</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .card-header {
+        border-radius: 10px 10px 0 0 !important;
+        font-weight: 600;
+    }
+    .form-label {
+        font-weight: 500;
+    }
+    .info-box {
+        background-color: #e3f2fd;
+        border-left: 4px solid #1976d2;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+    }
+    .session-preview {
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        padding: 15px;
+        margin-top: 20px;
+    }
+    .session-date {
+        font-weight: 600;
+        color: #1976d2;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-calendar-plus me-2"></i> Programar Nuevo Tratamiento con Seguimiento
+                </div>
+                <div class="card-body">
+                    <div class="info-box mb-4">
+                        <i class="fas fa-info-circle me-2"></i> 
+                        <strong>Información:</strong> Al crear un tratamiento con seguimiento, se generarán automáticamente las sesiones programadas según la frecuencia y cantidad que especifique.
+                    </div>
+                    
+                    <form method="post" id="tratamientoForm">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="id_paciente" class="form-label">Paciente:</label>
+                            <select name="paciente" id="id_paciente" class="form-select" required>
+                                <option value="">Seleccione un paciente</option>
+                                {% for paciente in pacientes %}
+                                    <option value="{{ paciente.id }}">{{ paciente.usuario.nombres }} {{ paciente.usuario.apellidos }} ({{ paciente.usuario.dni }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_diagnostico" class="form-label">Diagnóstico:</label>
+                            <textarea name="diagnostico" id="id_diagnostico" class="form-control" rows="4" required></textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="id_cantidad_sesiones" class="form-label">Cantidad de sesiones:</label>
+                                    <input type="number" name="cantidad_sesiones" id="id_cantidad_sesiones" class="form-control" min="1" max="20" value="5" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="id_frecuencia_dias" class="form-label">Frecuencia (días):</label>
+                                    <input type="number" name="frecuencia_dias" id="id_frecuencia_dias" class="form-control" min="1" max="30" value="7" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="id_fecha_inicio" class="form-label">Fecha de inicio:</label>
+                                    <input type="date" name="fecha_inicio" id="id_fecha_inicio" class="form-control" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="session-preview" id="sessionPreview">
+                            <h5><i class="fas fa-calendar-check me-2"></i> Vista previa de sesiones</h5>
+                            <p class="text-muted">Complete el formulario para ver las fechas estimadas de las sesiones.</p>
+                            <div id="sessionDates" class="d-none">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Sesión</th>
+                                                <th>Fecha estimada</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="sessionTableBody">
+                                            <!-- Las fechas se generarán dinámicamente -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4 d-flex justify-content-between">
+                            <a href="{% url 'ver_seguimientos' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i> Guardar Tratamiento
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-info-circle me-2"></i> Información
+                </div>
+                <div class="card-body">
+                    <h5>¿Qué es un tratamiento con seguimiento?</h5>
+                    <p>Un tratamiento con seguimiento permite programar múltiples sesiones para un paciente que requiere atención continua.</p>
+                    
+                    <h5>Beneficios:</h5>
+                    <ul>
+                        <li>Seguimiento estructurado del progreso del paciente</li>
+                        <li>Programación ordenada de sesiones</li>
+                        <li>Registro de evolución en cada sesión</li>
+                        <li>Mejor adherencia al tratamiento</li>
+                    </ul>
+                    
+                    <h5>Recomendaciones:</h5>
+                    <ul>
+                        <li>Establezca un diagnóstico claro y detallado</li>
+                        <li>Determine la cantidad de sesiones según la condición del paciente</li>
+                        <li>Ajuste la frecuencia según la necesidad clínica</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Establecer la fecha de hoy como mínima para la fecha de inicio
+        const today = new Date();
+        const formattedDate = today.toISOString().split('T')[0];
+        document.getElementById('id_fecha_inicio').min = formattedDate;
+        document.getElementById('id_fecha_inicio').value = formattedDate;
+        
+        // Función para actualizar la vista previa de sesiones
+        function updateSessionPreview() {
+            const cantidadSesiones = parseInt(document.getElementById('id_cantidad_sesiones').value) || 0;
+            const frecuenciaDias = parseInt(document.getElementById('id_frecuencia_dias').value) || 0;
+            const fechaInicio = document.getElementById('id_fecha_inicio').value;
+            
+            if (cantidadSesiones > 0 && frecuenciaDias > 0 && fechaInicio) {
+                // Mostrar la tabla
+                document.getElementById('sessionDates').classList.remove('d-none');
+                
+                // Limpiar tabla
+                const tableBody = document.getElementById('sessionTableBody');
+                tableBody.innerHTML = '';
+                
+                // Calcular fechas
+                let currentDate = new Date(fechaInicio);
+                
+                for (let i = 1; i <= cantidadSesiones; i++) {
+                    const row = document.createElement('tr');
+                    
+                    // Columna de número de sesión
+                    const sessionCell = document.createElement('td');
+                    sessionCell.textContent = `Sesión ${i}`;
+                    row.appendChild(sessionCell);
+                    
+                    // Columna de fecha
+                    const dateCell = document.createElement('td');
+                    dateCell.className = 'session-date';
+                    dateCell.textContent = currentDate.toLocaleDateString('es-ES', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    });
+                    row.appendChild(dateCell);
+                    
+                    tableBody.appendChild(row);
+                    
+                    // Calcular próxima fecha
+                    currentDate.setDate(currentDate.getDate() + frecuenciaDias);
+                }
+            } else {
+                // Ocultar la tabla si faltan datos
+                document.getElementById('sessionDates').classList.add('d-none');
+            }
+        }
+        
+        // Actualizar vista previa cuando cambian los valores
+        document.getElementById('id_cantidad_sesiones').addEventListener('input', updateSessionPreview);
+        document.getElementById('id_frecuencia_dias').addEventListener('input', updateSessionPreview);
+        document.getElementById('id_fecha_inicio').addEventListener('change', updateSessionPreview);
+        
+        // Inicializar vista previa
+        updateSessionPreview();
+    });
+</script>
+{% endblock %}

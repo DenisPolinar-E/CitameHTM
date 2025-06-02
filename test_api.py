@@ -19,12 +19,17 @@ def get_auth_token(username, password):
     user = authenticate(username=username, password=password)
     if user:
         token, _ = Token.objects.get_or_create(user=user)
+        print(f"Token generado para {username}: {token.key}")
         return token.key
-    return None
+    else:
+        print(f"Error de autenticación para el usuario {username}")
+        return None
 
-# Función para probar la API directamente
+# Función para probar la API de médicos por especialidad
 def test_api_medicos_por_especialidad(especialidad_id, token):
-    url = f"http://localhost:8000/api/medicos-por-especialidad/{especialidad_id}/"
+    # URL correcta según la memoria del sistema
+    url = f"http://localhost:8000/api/medicos-por-especialidad/?especialidad_id={especialidad_id}"
+    
     headers = {
         'Authorization': f'Token {token}',
         'Content-Type': 'application/json'
@@ -40,29 +45,54 @@ def test_api_medicos_por_especialidad(especialidad_id, token):
         
         if response.status_code == 200:
             data = response.json()
-            print(f"Respuesta: {json.dumps(data, indent=2)}")
+            print("Respuesta:")
+            print(json.dumps(data, indent=4, ensure_ascii=False))
             
-            if data.get('success'):
-                medicos = data.get('medicos', [])
-                print(f"Médicos encontrados: {len(medicos)}")
-                for medico in medicos:
-                    print(f"  - ID: {medico.get('id')}, Nombre: {medico.get('nombres')} {medico.get('apellidos')}")
-            else:
-                print(f"Error en la respuesta: {data.get('error')}")
+            # Mostrar información de médicos si está disponible
+            medicos = data.get('medicos', [])
+            print(f"Médicos encontrados: {len(medicos)}")
+            for medico in medicos:
+                print(f"  - ID: {medico.get('id')}, Nombre: {medico.get('nombre')}")
         else:
-            print(f"Error en la solicitud: {response.text}")
+            print(f"Error: {response.text}")
     except Exception as e:
-        print(f"Error al realizar la solicitud: {str(e)}")
+        print(f"Error en la solicitud: {e}")
 
-# Crear un usuario de prueba con rol de paciente si no existe
+# Función para probar la API de distribución de citas
+def test_api_distribucion_citas(periodo, fecha_inicio, fecha_fin, especialidad_id, token):
+    url = f"http://localhost:8000/api/distribucion-citas/?periodo={periodo}&fecha_inicio={fecha_inicio}&fecha_fin={fecha_fin}&especialidad={especialidad_id}"
+    
+    headers = {
+        'Authorization': f'Token {token}',
+        'Content-Type': 'application/json'
+    }
+    
+    print(f"\nProbando API de distribución de citas")
+    print(f"Filtros: Periodo={periodo}, Fecha inicio={fecha_inicio}, Fecha fin={fecha_fin}, Especialidad ID={especialidad_id}")
+    print(f"URL: {url}")
+    
+    try:
+        response = requests.get(url, headers=headers)
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            print("Respuesta:")
+            print(json.dumps(data, indent=4, ensure_ascii=False))
+        else:
+            print(f"Error: {response.text}")
+    except Exception as e:
+        print(f"Error en la solicitud: {e}")
+
+# Función para asegurar que existe un usuario de prueba
 def ensure_test_user():
     User = get_user_model()
-    username = "testpaciente"
-    password = "testpassword"
+    username = "testuser"
+    password = "testpass123"
     
     try:
         user = User.objects.get(username=username)
-        print(f"Usuario de prueba ya existe: {user.username}")
+        print(f"Usuario de prueba ya existe: {username}")
     except User.DoesNotExist:
         # Crear rol de paciente si no existe
         rol, _ = Rol.objects.get_or_create(nombre="Paciente")
@@ -81,9 +111,9 @@ def ensure_test_user():
     
     return username, password
 
-# Ejecutar pruebas
+# Bloque principal para ejecutar el script
 if __name__ == "__main__":
-    print("=== PROBANDO API DE MÉDICOS POR ESPECIALIDAD ===")
+    print("=== PROBANDO APIs DEL SISTEMA ===")
     
     # Asegurar que existe un usuario de prueba
     username, password = ensure_test_user()
@@ -96,7 +126,23 @@ if __name__ == "__main__":
     
     print(f"Token obtenido: {token}")
     
-    # Probar con todas las especialidades
+    # Probar API de médicos por especialidad
+    print("\n=== PROBANDO API DE MÉDICOS POR ESPECIALIDAD ===")
     especialidades = Especialidad.objects.all()
-    for esp in especialidades:
-        test_api_medicos_por_especialidad(esp.id, token)
+    if especialidades.exists():
+        for esp in especialidades[:3]:  # Limitar a las primeras 3 especialidades
+            test_api_medicos_por_especialidad(esp.id, token)
+    else:
+        print("No hay especialidades registradas en el sistema")
+        # Probar con un ID genérico
+        test_api_medicos_por_especialidad("1", token)
+    
+    # Probar API de distribución de citas
+    print("\n=== PROBANDO API DE DISTRIBUCIÓN DE CITAS ===")
+    test_api_distribucion_citas(
+        periodo="mensual", 
+        fecha_inicio="2025-01-01", 
+        fecha_fin="2025-12-31", 
+        especialidad_id="",  # Sin filtro de especialidad
+        token=token
+    )

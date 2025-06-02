@@ -5,6 +5,12 @@
 
 {% block page_title %}Dashboard Administrador{% endblock %}
 
+{% block sidebar_menu %}
+<a href="{% url 'dashboard_admin' %}" class="menu-item active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="{% url 'admin_historial_medico' %}" class="menu-item"><i class="fas fa-file-medical-alt"></i> Historial Médico</a>
+<a href="{% url 'perfil_admin' %}" class="menu-item"><i class="fas fa-user-shield"></i> Mi Perfil</a>
+{% endblock %}
+
 {% block extra_css %}
 <style>
     .custom-progress {

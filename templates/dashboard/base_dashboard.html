@@ -108,6 +108,138 @@
             border-left-color: var(--secondary-color);
         }
         
+        /* Estilos para menú desplegable */
+        .menu-dropdown {
+            position: relative;
+        }
+        
+        .dropdown-toggle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+        
+        .dropdown-icon {
+            font-size: 0.8rem;
+            transition: transform 0.3s;
+        }
+        
+        .dropdown-toggle[aria-expanded="true"] .dropdown-icon {
+            transform: rotate(180deg);
+        }
+        
+        .submenu {
+            display: none;
+            padding: 0;
+            background-color: #f9f9f9;
+            overflow: hidden;
+        }
+        
+        .submenu.show {
+            display: block;
+        }
+        
+        .submenu-group {
+            margin-bottom: 5px;
+        }
+        
+        .submenu-header {
+            padding: 10px 20px 10px 35px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #555;
+            text-decoration: none;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        
+        .submenu-header:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .submenu-icon {
+            font-size: 0.7rem;
+            transition: transform 0.3s;
+        }
+        
+        .submenu-header[aria-expanded="true"] .submenu-icon {
+            transform: rotate(180deg);
+        }
+        
+        .submenu-items {
+            display: none;
+            padding: 0;
+            background-color: #f0f0f0;
+            overflow: hidden;
+        }
+        
+        .submenu-items.show {
+            display: block;
+        }
+        
+        /* Estilos para menús desplegables principales */
+        .menu-dropdown {
+            width: 100%;
+        }
+        
+        .menu-dropdown .dropdown-toggle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            padding: 12px 20px;
+            color: #555;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+        
+        .menu-dropdown .dropdown-toggle:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .menu-dropdown .dropdown-icon {
+            font-size: 0.8rem;
+            transition: transform 0.3s;
+            margin-left: 5px;
+        }
+        
+        .menu-dropdown .dropdown-toggle[aria-expanded="true"] .dropdown-icon {
+            transform: rotate(180deg);
+        }
+        
+        .menu-dropdown .submenu {
+            display: none;
+            background-color: #f5f5f5;
+            overflow: hidden;
+            padding-left: 10px;
+        }
+        
+        .menu-dropdown .submenu.show {
+            display: block;
+        }
+        
+        /* Asegurar que los submenús sean visibles */
+        .submenu-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px 10px 40px;
+            color: #666;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: background-color 0.2s;
+        }
+        
+        .submenu-item:hover {
+            background-color: #e8e8e8;
+        }
+        
+        .submenu-item i {
+            font-size: 0.9rem;
+            margin-right: 10px;
+        }
+        
         .sidebar-menu .menu-item.active {
             background-color: #e3f2fd;
             border-left-color: var(--primary-color);
@@ -140,6 +272,172 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+        }
+        
+        /* Panel de Notificaciones (Drawer) */
+        .notifications-drawer {
+            position: fixed;
+            top: 0;
+            right: -350px; /* Empieza fuera de la pantalla */
+            width: 350px;
+            height: 100vh;
+            background-color: white;
+            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+            z-index: 2000;
+            transition: right 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .notifications-drawer.show {
+            right: 0;
+        }
+        
+        .notifications-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .notifications-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+        
+        .notification-item {
+            padding: 12px 20px;
+            border-bottom: 1px solid #f5f5f5;
+            display: flex;
+            align-items: flex-start;
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+        
+        .notification-item:hover {
+            background-color: #f9f9f9;
+        }
+        
+        .notification-item.unread {
+            background-color: #e3f2fd;
+            border-left: 4px solid var(--primary-color);
+            font-weight: 500;
+        }
+        
+        .notification-item.unread .notification-icon {
+            color: var(--primary-color);
+            position: relative;
+        }
+        
+        .unread-indicator {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            display: block;
+        }
+        
+        .notification-link {
+            display: flex;
+            width: 100%;
+            color: inherit;
+            text-decoration: none;
+        }
+        
+        .notification-link:hover {
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .empty-notifications {
+            padding: 30px 20px;
+            text-align: center;
+            color: #6c757d;
+        }
+        
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: #adb5bd;
+        }
+        
+        .notification-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            color: var(--primary-color);
+        }
+        
+        .notification-content {
+            flex: 1;
+        }
+        
+        .notification-text {
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .notification-time {
+            color: #999;
+            font-size: 0.75rem;
+            margin: 0;
+        }
+        
+        .notifications-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 50px 20px;
+            text-align: center;
+        }
+        
+        .notifications-empty-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+            margin-bottom: 15px;
+        }
+        
+        .btn-icon.notifications-close,
+        .btn-icon.notifications-settings {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 5px;
+            margin-left: 10px;
+        }
+        
+        .notifications-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1999;
+            display: none;
+        }
+        
+        .notifications-overlay.show {
+            display: block;
         }
         
         .topbar .toggle-sidebar {
@@ -352,6 +650,67 @@
         </div>
     </div>
     
+    <!-- Panel de Notificaciones (Drawer) -->
+    <div class="notifications-drawer" id="notificationsDrawer">
+        <div class="notifications-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Notificaciones</h5>
+                <div>
+                    <button class="btn-icon notifications-settings" id="notificationsSettings">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    <button class="btn-icon notifications-close" id="closeNotifications">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="notifications-content">
+            {% load notification_filters %}
+            {% if user.notificaciones.all %}
+                {% with notificaciones_filtradas=user.notificaciones.all|filter_notificaciones_activas %}
+                {% if notificaciones_filtradas %}
+                    {% for notificacion in notificaciones_filtradas|slice:":10" %}
+                <div class="notification-item {% if not notificacion.leido %}unread{% endif %}" data-notification-id="{{ notificacion.id }}">
+                    {% if notificacion.url_redireccion %}
+                    <a href="{{ notificacion.url_redireccion }}" class="notification-link" data-notification-id="{{ notificacion.id }}">
+                    {% endif %}
+                        <div class="notification-icon">
+                            <i class="fas fa-{{ notificacion.tipo|get_notification_icon }}"></i>
+                            {% if not notificacion.leido %}<span class="unread-indicator"></span>{% endif %}
+                        </div>
+                        <div class="notification-content">
+                            <p class="notification-text">{{ notificacion.mensaje }}</p>
+                            <p class="notification-time">{{ notificacion.fecha_envio|date:"d/m/Y H:i" }}</p>
+                        </div>
+                    {% if notificacion.url_redireccion %}
+                    </a>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% else %}
+                    <div class="empty-notifications">
+                        <div class="empty-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <p>No tienes notificaciones pendientes</p>
+                    </div>
+                {% endif %}
+                {% endwith %}
+            {% else %}
+                <div class="empty-notifications">
+                    <div class="empty-icon">
+                        <i class="fas fa-bell-slash"></i>
+                    </div>
+                    <p>No tienes notificaciones</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Overlay para el panel de notificaciones -->
+    <div class="notifications-overlay" id="notificationsOverlay"></div>
+
     <!-- Main Content -->
     <div class="main-content">
         <!-- Topbar -->
@@ -367,9 +726,7 @@
                 <div class="action-item">
                     <button class="btn-icon" id="btnNotifications">
                         <i class="fas fa-bell"></i>
-                        {% with no_leidas=user.notificaciones.filter %}{% if no_leidas %}
-                        <span class="notification-badge">{{ no_leidas.count }}</span>
-                        {% endif %}{% endwith %}
+                        <span class="notification-badge" style="display: none;">0</span>
                     </button>
                 </div>
                 
@@ -378,7 +735,15 @@
                         <i class="fas fa-user-circle"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                        <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>Mi Perfil</a></li>
+                        <li>
+                            {% if user.paciente %}
+                            <a class="dropdown-item" href="{% url 'perfil_paciente' %}"><i class="fas fa-user me-2"></i>Mi Perfil</a>
+                            {% elif user.medico %}
+                            <a class="dropdown-item" href="{% url 'perfil_medico' %}"><i class="fas fa-user-md me-2"></i>Mi Perfil</a>
+                            {% else %}
+                            <a class="dropdown-item" href="{% url 'dashboard' %}"><i class="fas fa-user me-2"></i>Dashboard</a>
+                            {% endif %}
+                        </li>
                         <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Configuración</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
@@ -407,6 +772,8 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Sistema de Notificaciones -->
+    <script src="/static/js/notifications.js"></script>
     
     <!-- Scripts personalizados -->
     <script>
@@ -427,6 +794,7 @@
             const toggleBtn = document.getElementById('toggleSidebar');
             
             if (window.innerWidth < 992 && 
+                sidebar && toggleBtn &&
                 !sidebar.contains(event.target) && 
                 !toggleBtn.contains(event.target) && 
                 sidebar.classList.contains('show')) {
@@ -435,59 +803,370 @@
         });
         
         // Cargar menú dinámico desde la API
-        function loadDynamicMenu() {
-            fetch('/api/dashboard/', {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                credentials: 'same-origin'
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.menu && data.menu.length > 0) {
-                    const sidebarMenu = document.querySelector('.sidebar-menu');
-                    sidebarMenu.innerHTML = '';
-                    
-                    // Agregar elemento Dashboard
-                    const dashboardItem = document.createElement('a');
-                    dashboardItem.href = '/dashboard/';
-                    dashboardItem.className = 'menu-item active';
-                    dashboardItem.innerHTML = '<i class="fas fa-tachometer-alt"></i> Dashboard';
-                    sidebarMenu.appendChild(dashboardItem);
-                    
-                    // Agregar elementos del menú dinámico
-                    data.menu.forEach(item => {
-                        const menuItem = document.createElement('a');
-                        menuItem.href = item.ruta;
-                        menuItem.className = 'menu-item';
-                        menuItem.innerHTML = `<i class="fas ${item.icono}"></i> ${item.nombre}`;
+function loadDynamicMenu() {
+    console.log('Cargando menú dinámico...');
+    
+    // Obtener la URL actual
+    const currentPath = window.location.pathname;
+    
+    // Cargar el menú dinámico para todas las páginas del dashboard
+    console.log('Cargando menú dinámico para: ' + currentPath);
+    
+    console.log('Realizando petición a /api/dashboard/ para obtener el menú dinámico...');
+    fetch('/api/dashboard/', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => {
+        console.log('Respuesta recibida:', response.status);
+        if (!response.ok) {
+            console.error('Error en la respuesta de la API:', response.status, response.statusText);
+            throw new Error('Error en la respuesta del servidor: ' + response.status);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Datos del menú recibidos:', data);
+        if (!data || typeof data !== 'object') {
+            console.error('Respuesta de API inválida:', data);
+            throw new Error('Respuesta de API inválida');
+        }
+        // Verificar si hay un menú en la respuesta
+        if (data.menu && data.menu.length > 0) {
+            const sidebarMenu = document.querySelector('.sidebar-menu');
+            if (sidebarMenu) {
+                // Limpiar menú actual
+                sidebarMenu.innerHTML = '';
+                
+                // Obtener la ruta actual para marcar el elemento activo
+                const currentPath = window.location.pathname;
+                
+                // Agregar elemento de Dashboard
+                const dashboardItem = document.createElement('a');
+                dashboardItem.href = '/dashboard/';
+                dashboardItem.className = currentPath === '/dashboard/' ? 'menu-item active' : 'menu-item';
+                dashboardItem.innerHTML = '<i class="fas fa-tachometer-alt"></i> Dashboard';
+                sidebarMenu.appendChild(dashboardItem);
+                
+                // Agregar elementos del menú dinámico
+                data.menu.forEach(item => {
+                    // Verificar si es un menú desplegable
+                    if (item.es_desplegable && item.submenus && item.submenus.length > 0) {
+                        console.log('Creando menú desplegable:', item.nombre);
+                        
+                        // Crear el contenedor principal del menú desplegable
+                        const menuItem = document.createElement('div');
+                        menuItem.className = 'menu-dropdown';
+                        
+                        // Crear el botón de menú desplegable
+                        const menuButton = document.createElement('a');
+                        menuButton.href = '#';
+                        menuButton.className = 'menu-item dropdown-toggle';
+                        menuButton.innerHTML = `
+                            <i class="fas ${item.icono}"></i>
+                            <span>${item.nombre}</span>
+                            <i class="fas fa-chevron-down dropdown-icon"></i>
+                        `;
+                        
+                        // Crear el contenedor de submenús
+                        const submenuContainer = document.createElement('div');
+                        submenuContainer.className = 'submenu';
+                        
+                        // Agregar los submenús
+                        item.submenus.forEach(submenu => {
+                            console.log('Agregando submenú:', submenu.nombre);
+                            const submenuItem = document.createElement('a');
+                            submenuItem.href = submenu.ruta;
+                            submenuItem.className = 'submenu-item';
+                            submenuItem.innerHTML = `<i class="fas ${submenu.icono}"></i> ${submenu.nombre}`;
+                            submenuContainer.appendChild(submenuItem);
+                        });
+                        
+                        // Agregar evento de clic para mostrar/ocultar submenús
+                        menuButton.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('Clic en menú desplegable:', item.nombre);
+                            
+                            // Toggle para mostrar/ocultar submenú
+                            const isExpanded = menuButton.getAttribute('aria-expanded') === 'true';
+                            menuButton.setAttribute('aria-expanded', !isExpanded);
+                            
+                            // Mostrar u ocultar el submenú
+                            if (isExpanded) {
+                                submenuContainer.style.display = 'none';
+                                menuButton.querySelector('.dropdown-icon').classList.remove('fa-chevron-up');
+                                menuButton.querySelector('.dropdown-icon').classList.add('fa-chevron-down');
+                            } else {
+                                submenuContainer.style.display = 'block';
+                                menuButton.querySelector('.dropdown-icon').classList.remove('fa-chevron-down');
+                                menuButton.querySelector('.dropdown-icon').classList.add('fa-chevron-up');
+                            }
+                        });
+                        
+                        // Agregar elementos al DOM
+                        menuItem.appendChild(menuButton);
+                        menuItem.appendChild(submenuContainer);
                         sidebarMenu.appendChild(menuItem);
-                    });
-                    
-                    // Actualizar contador de notificaciones
-                    if (data.notificaciones_no_leidas > 0) {
-                        const badge = document.querySelector('.notification-badge');
-                        if (badge) {
-                            badge.textContent = data.notificaciones_no_leidas;
-                        } else {
-                            const btnNotifications = document.getElementById('btnNotifications');
-                            const newBadge = document.createElement('span');
-                            newBadge.className = 'notification-badge';
-                            newBadge.textContent = data.notificaciones_no_leidas;
-                            btnNotifications.appendChild(newBadge);
+                    } else {
+                            // Crear item de menú normal
+                            const menuItem = document.createElement('a');
+                            menuItem.href = item.ruta;
+                            // Marcar como activo si estamos en la página correspondiente
+                            menuItem.className = currentPath === item.ruta ? 'menu-item active' : 'menu-item';
+                            menuItem.innerHTML = `<i class="fas ${item.icono}"></i> ${item.nombre}`;
+                            sidebarMenu.appendChild(menuItem);
                         }
+                    });
+                } else {
+                    console.log('No se encontró el contenedor del menú lateral');
+                }
+            } else {
+                console.error('No se recibió un menú válido en la respuesta:', data);
+                // Mostrar un menú predeterminado para administradores si estamos en una ruta de administrador
+                if (window.location.pathname.includes('/admin/') || window.location.pathname.includes('/administrador/')) {
+                    console.log('Detectada ruta de administrador, cargando menú predeterminado');
+                    const sidebarMenu = document.querySelector('.sidebar-menu');
+                    if (sidebarMenu) {
+                        // Limpiar menú actual
+                        sidebarMenu.innerHTML = '';
+                        
+                        // Agregar elemento de Dashboard
+                        const dashboardItem = document.createElement('a');
+                        dashboardItem.href = '/dashboard/';
+                        dashboardItem.className = 'menu-item';
+                        dashboardItem.innerHTML = '<i class="fas fa-tachometer-alt"></i> Dashboard';
+                        sidebarMenu.appendChild(dashboardItem);
+                        
+                        // Agregar elementos del menú predeterminado para administradores
+                        const adminMenuItems = [
+                            {nombre: 'Análisis Temporal', icono: 'fa-clock', ruta: '/administrador/analisis-temporal/distribucion/'},
+                            {nombre: 'Análisis por Origen', icono: 'fa-map-marker-alt', ruta: '/administrador/analisis-origen/admision/'},
+                            {nombre: 'Análisis por Especialidad', icono: 'fa-stethoscope', ruta: '/administrador/analisis-especialidad/'},
+                            {nombre: 'Análisis por Médico', icono: 'fa-user-md', ruta: '/administrador/analisis-medico/'},
+                            {nombre: 'Análisis de Estado', icono: 'fa-chart-pie', ruta: '/administrador/analisis-estado/completadas/'},
+                            {nombre: 'Reportes Especiales', icono: 'fa-file-alt', ruta: '/administrador/especiales/pacientes/'},
+                            {nombre: 'Mi Perfil', icono: 'fa-user', ruta: '/admin/perfil/'}
+                        ];
+                        
+                        adminMenuItems.forEach(item => {
+                            const menuItem = document.createElement('a');
+                            menuItem.href = item.ruta;
+                            menuItem.className = window.location.pathname === item.ruta ? 'menu-item active' : 'menu-item';
+                            menuItem.innerHTML = `<i class="fas ${item.icono}"></i> ${item.nombre}`;
+                            sidebarMenu.appendChild(menuItem);
+                        });
                     }
                 }
-            })
-            .catch(error => console.error('Error cargando menú dinámico:', error));
-        }
+            }
+            
+            
+            // Actualizar contador de notificaciones si existe en la respuesta
+            if (data.notificaciones_no_leidas && data.notificaciones_no_leidas > 0) {
+                console.log('Actualizando contador de notificaciones:', data.notificaciones_no_leidas);
+                const badge = document.querySelector('.notification-badge');
+                if (badge) {
+                    badge.textContent = data.notificaciones_no_leidas;
+                } else {
+                    const btnNotifications = document.getElementById('btnNotifications');
+                    if (btnNotifications) {
+                        const newBadge = document.createElement('span');
+                        newBadge.className = 'notification-badge';
+                        newBadge.textContent = data.notificaciones_no_leidas;
+                        btnNotifications.appendChild(newBadge);
+                    }
+                }
+            }
+            
+            // Inicializar los menús desplegables después de cargar el menú
+            console.log('Menú cargado exitosamente, inicializando menús desplegables...');
+            setTimeout(initDropdownMenus, 100);
+        })
+        .catch(error => {
+            console.error('Error cargando menú dinámico:', error);
+            // Intentar cargar un menú de emergencia para administradores en caso de error
+            if (window.location.pathname.includes('/admin/') || window.location.pathname.includes('/administrador/')) {
+                console.warn('Intentando cargar menú de emergencia para administrador...');
+                // Código para cargar menú de emergencia si es necesario
+            }
+        });
+    }
         
         // Cargar menú al iniciar la página
         document.addEventListener('DOMContentLoaded', function() {
             loadDynamicMenu();
+            
+            // Dar tiempo para que el menú se cargue completamente
+            setTimeout(function() {
+                initDropdownMenus();
+                
+                // Verificar si es administrador y añadir botón de depuración
+                if (window.location.pathname.includes('/admin/') || window.location.pathname.includes('/administrador/')) {
+                    console.log('Usuario administrador detectado, agregando botón de diagnóstico...');
+                    const debugButton = document.createElement('button');
+                    debugButton.textContent = 'Diagnosticar Menú';
+                    debugButton.className = 'btn btn-info btn-sm';
+                    debugButton.style.position = 'fixed';
+                    debugButton.style.bottom = '10px';
+                    debugButton.style.right = '10px';
+                    debugButton.style.zIndex = '9999';
+                    debugButton.style.padding = '5px 10px';
+                    debugButton.style.fontSize = '12px';
+                    debugButton.style.backgroundColor = '#007bff';
+                    debugButton.style.color = 'white';
+                    debugButton.style.border = 'none';
+                    debugButton.style.borderRadius = '4px';
+                    debugButton.style.cursor = 'pointer';
+                    debugButton.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+                    
+                    // Añadir evento onclick para diagnóstico completo
+                    debugButton.onclick = function() {
+                        console.log('--- DIAGNÓSTICO DEL MENÚ ---');
+                        
+                        // Verificar menú actual
+                        const sidebarMenu = document.querySelector('.sidebar-menu');
+                        if (sidebarMenu) {
+                            console.log('Estado del menú lateral:');
+                            console.log('- Contenido HTML:', sidebarMenu.innerHTML);
+                            console.log('- Número de elementos:', sidebarMenu.children.length);
+                            console.log('- Menús desplegables:', sidebarMenu.querySelectorAll('.menu-dropdown').length);
+                        } else {
+                            console.error('No se encontró el contenedor del menú (.sidebar-menu)');
+                        }
+                        
+                        // Realizar una prueba de petición al API
+                        console.log('Probando conexión al API...');
+                        fetch('/api/dashboard/', {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            credentials: 'same-origin'
+                        })
+                        .then(response => {
+                            console.log('Respuesta API:', response.status);
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log('Datos API recibidos:', data);
+                            console.log('Menú en respuesta:', data.menu ? 'Sí' : 'No');
+                            if (data.menu) {
+                                console.log('Elementos en menú API:', data.menu.length);
+                                console.log('Primer elemento:', data.menu[0]);
+                            }
+                            
+                            // Intentar recargar el menú
+                            if (confirm('¿Desea recargar el menú con los datos obtenidos?')) {
+                                loadDynamicMenu();
+                                setTimeout(() => {
+                                    alert('Menú recargado. Verifique la consola para ver detalles del diagnóstico.');
+                                }, 500);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error al obtener datos del API:', error);
+                            alert('Error al comunicarse con el API. Revise la consola para más detalles.');
+                        });
+                    };
+                    
+                    document.body.appendChild(debugButton);
+                }
+            }, 500);
         });
+        
+        // Función para inicializar los menús desplegables
+function initDropdownMenus() {
+    console.log('Inicializando menús desplegables...');
+    
+    // Usar delegación de eventos para manejar clics en todo el menú
+    const sidebarMenu = document.querySelector('.sidebar-menu');
+    if (sidebarMenu) {
+        console.log('Menú lateral encontrado. Configurando eventos...');
+        
+        // Verificar si hay menús desplegables y mostrarlos en consola
+        const dropdownMenus = sidebarMenu.querySelectorAll('.menu-dropdown');
+        console.log(`Encontrados ${dropdownMenus.length} menús desplegables`);
+        dropdownMenus.forEach(menu => {
+            console.log('Menú desplegable:', menu.querySelector('.dropdown-toggle')?.textContent.trim());
+        });
+        
+        // Eliminar el controlador de eventos anterior si existe
+        if (sidebarMenu._menuClickHandler) {
+            sidebarMenu.removeEventListener('click', sidebarMenu._menuClickHandler);
+            console.log('Controlador de eventos anterior eliminado');
+        }
+        
+        // Crear nuevo controlador de eventos
+        sidebarMenu._menuClickHandler = function(e) {
+            // Manejar clics en menús desplegables principales
+            const toggleElement = e.target.closest('.dropdown-toggle');
+            if (toggleElement) {
+                e.preventDefault();
+                console.log('Clic en menú desplegable:', toggleElement.textContent.trim());
+                
+                const isExpanded = toggleElement.getAttribute('aria-expanded') === 'true';
+                toggleElement.setAttribute('aria-expanded', !isExpanded);
+                
+                // Encontrar el submenú (hermano siguiente del botón toggle)
+                const submenu = toggleElement.closest('.menu-dropdown').querySelector('.submenu');
+                
+                if (submenu) {
+                    if (isExpanded) {
+                        submenu.style.display = 'none';
+                        toggleElement.querySelector('.dropdown-icon')?.classList.remove('fa-chevron-up');
+                        toggleElement.querySelector('.dropdown-icon')?.classList.add('fa-chevron-down');
+                    } else {
+                        submenu.style.display = 'block';
+                        toggleElement.querySelector('.dropdown-icon')?.classList.remove('fa-chevron-down');
+                        toggleElement.querySelector('.dropdown-icon')?.classList.add('fa-chevron-up');
+                    }
+                    console.log('Submenú alternado correctamente');
+                } else {
+                    console.warn('No se encontró el submenú para:', toggleElement.textContent.trim());
+                }
+            }
+            
+            // Manejar clics en encabezados de submenú
+            const headerElement = e.target.closest('.submenu-header');
+            if (headerElement) {
+                e.preventDefault();
+                console.log('Clic en encabezado de submenú:', headerElement.textContent.trim());
+                
+                const isExpanded = headerElement.getAttribute('aria-expanded') === 'true';
+                headerElement.setAttribute('aria-expanded', !isExpanded);
+                
+                // Encontrar el contenedor de items (hermano siguiente del encabezado)
+                const submenuItems = headerElement.nextElementSibling;
+                
+                if (submenuItems && submenuItems.classList.contains('submenu-items')) {
+                    submenuItems.classList.toggle('show');
+                    console.log('Items de submenú alternados correctamente');
+                } else {
+                    console.warn('No se encontraron items para el encabezado:', headerElement.textContent.trim());
+                }
+            }
+        };
+        
+        // Agregar el controlador de eventos
+        sidebarMenu.addEventListener('click', sidebarMenu._menuClickHandler);
+        console.log('Delegación de eventos configurada para el menú');
+    } else {
+        console.error('PROBLEMA CRÍTICO: No se encontró el menú lateral (.sidebar-menu)');
+    }
+    
+    // Verificar estado de los menús desplegables
+    setTimeout(() => {
+        console.log('Verificando estado final de los menús desplegables...');
+        const menuItems = document.querySelectorAll('.sidebar-menu > *');
+        console.log(`Total de elementos en el menú: ${menuItems.length}`);
+    }, 200);
+}
+
     </script>
     
     {% block extra_js %}{% endblock %}

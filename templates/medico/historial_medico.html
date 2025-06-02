@@ -4,6 +4,66 @@
 
 {% block page_title %}Historial Médico{% endblock %}
 
+{% block extra_css %}
+<style>
+    .vital-card {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        height: 100%;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+    }
+    
+    .vital-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .vital-label {
+        display: block;
+        font-size: 14px;
+        color: #6c757d;
+        margin-bottom: 5px;
+    }
+    
+    .vital-value {
+        display: block;
+        font-size: 24px;
+        font-weight: bold;
+        color: #343a40;
+    }
+    
+    .imc-category {
+        display: block;
+        font-size: 14px;
+        margin-top: 5px;
+    }
+    
+    .antropometricos-table th {
+        background-color: #f0f7ff;
+    }
+    
+    .btn-registro {
+        transition: all 0.3s ease;
+    }
+    
+    .btn-registro:hover {
+        transform: scale(1.05);
+    }
+    
+    .datos-card {
+        transition: all 0.3s ease;
+        border-left: 4px solid #4e73df;
+    }
+    
+    .datos-card:hover {
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
     <!-- Buscador de Pacientes -->
@@ -12,13 +72,17 @@
             <h5 class="mb-0"><i class="fas fa-search me-2"></i> Buscar Paciente</h5>
         </div>
         <div class="card-body">
-            <form method="GET" action="{% url 'historial_medico' %}" class="row g-3">
+            <form id="formBusquedaPaciente" method="GET" action="{% url 'historial_medico' %}" class="row g-3">
                 <div class="col-md-8">
                     <div class="input-group">
                         <span class="input-group-text bg-primary text-white">
                             <i class="fas fa-user-injured"></i>
                         </span>
-                        <input type="text" name="q" class="form-control" placeholder="Buscar por nombre, apellido o DNI" value="{{ query }}">
+                        <input type="text" id="buscarPaciente" name="q" class="form-control" placeholder="Buscar por nombre, apellido o DNI" value="{{ query }}" autocomplete="off">
+                        <input type="hidden" id="pacienteId" name="paciente_id" value="">
+                    </div>
+                    <!-- Contenedor para resultados de autocompletado -->
+                    <div id="resultadosAutocompletado" class="position-absolute bg-white shadow rounded-bottom border w-75 mt-1 d-none" style="z-index: 1000; max-height: 300px; overflow-y: auto;">
                     </div>
                 </div>
                 <div class="col-md-4">
@@ -113,11 +177,78 @@
             </div>
         </div>
         
+        <!-- Datos Vitales -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-heartbeat me-2"></i> Datos Vitales</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="vital-card">
+                            <span class="vital-label">Edad</span>
+                            <span class="vital-value">
+                                {% if paciente.usuario.fecha_nacimiento %}
+                                    {{ paciente.usuario.fecha_nacimiento|timesince|slice:"0:2" }} años
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="vital-card">
+                            <span class="vital-label">Peso</span>
+                            <span class="vital-value">
+                                {% if datos_antropometricos.first.peso %}
+                                    {{ datos_antropometricos.first.peso }} kg
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="vital-card">
+                            <span class="vital-label">Talla</span>
+                            <span class="vital-value">
+                                {% if datos_antropometricos.first.talla %}
+                                    {{ datos_antropometricos.first.talla }} cm
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="vital-card">
+                            <span class="vital-label">IMC</span>
+                            <span class="vital-value">
+                                {% if datos_antropometricos.first.imc %}
+                                    {{ datos_antropometricos.first.imc }}
+                                    <span class="imc-category">
+                                        ({{ datos_antropometricos.first.get_categoria_imc }})
+                                    </span>
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <!-- Pestañas para diferentes secciones -->
         <ul class="nav nav-tabs mb-4" id="historialTab" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="historial-tab" data-bs-toggle="tab" data-bs-target="#historial-tab-pane" type="button" role="tab" aria-controls="historial-tab-pane" aria-selected="true">
                     <i class="fas fa-clipboard-list me-1"></i> Historial Médico
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="antropometricos-tab" data-bs-toggle="tab" data-bs-target="#antropometricos-tab-pane" type="button" role="tab" aria-controls="antropometricos-tab-pane" aria-selected="false">
+                    <i class="fas fa-weight me-1"></i> Datos Antropométricos
                 </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -176,6 +307,75 @@
                         <i class="fas fa-info-circle me-2"></i> No hay registros de historial médico para este paciente.
                     </div>
                 {% endif %}
+            </div>
+            
+            <!-- Datos Antropométricos Tab -->
+            <div class="tab-pane fade" id="antropometricos-tab-pane" role="tabpanel" aria-labelledby="antropometricos-tab" tabindex="0">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-weight me-2"></i> Registro de Datos Antropométricos</h5>
+                        <button type="button" class="btn btn-primary btn-registro" data-bs-toggle="modal" data-bs-target="#modalRegistroAntropometricos">
+                            <i class="fas fa-plus-circle me-1"></i> Nuevo Registro
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        {% if datos_antropometricos %}
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover antropometricos-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Fecha</th>
+                                            <th>Peso (kg)</th>
+                                            <th>Talla (cm)</th>
+                                            <th>IMC</th>
+                                            <th>Categoría</th>
+                                            <th>Registrado por</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for dato in datos_antropometricos %}
+                                        <tr>
+                                            <td>{{ dato.fecha_registro|date:"d/m/Y" }}</td>
+                                            <td>{{ dato.peso }}</td>
+                                            <td>{{ dato.talla }}</td>
+                                            <td>{{ dato.imc }}</td>
+                                            <td>
+                                                {% if dato.imc < 18.5 %}
+                                                    <span class="badge bg-info">Bajo peso</span>
+                                                {% elif dato.imc < 25 %}
+                                                    <span class="badge bg-success">Normal</span>
+                                                {% elif dato.imc < 30 %}
+                                                    <span class="badge bg-warning">Sobrepeso</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">Obesidad</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ dato.medico.usuario.get_full_name|default:"Sistema" }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- Gráfico de evolución -->
+                            <div class="mt-4">
+                                <h5 class="mb-3">Evolución del Peso e IMC</h5>
+                                <canvas id="chartAntropometricos" width="400" height="200"></canvas>
+                                <script type="application/json" id="datos-antropometricos-json">
+                                    {
+                                        "fechas": [{% for dato in datos_antropometricos %}"{{ dato.fecha_registro|date:'d/m/Y' }}"{% if not forloop.last %},{% endif %}{% endfor %}],
+                                        "pesos": [{% for dato in datos_antropometricos %}{{ dato.peso }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                                        "imcs": [{% for dato in datos_antropometricos %}{{ dato.imc }}{% if not forloop.last %},{% endif %}{% endfor %}]
+                                    }
+                                </script>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i> No hay datos antropométricos registrados para este paciente.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
             
             <!-- Derivaciones Tab -->
@@ -284,14 +484,314 @@
         </div>
     {% endif %}
 </div>
+
+<!-- Modal para Registro de Datos Antropométricos -->
+<div class="modal fade" id="modalRegistroAntropometricos" tabindex="-1" aria-labelledby="modalRegistroAntropometricosLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalRegistroAntropometricosLabel">
+                    <i class="fas fa-weight me-2"></i> Registro de Datos Antropométricos
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="#" id="formDatosAntropometricos">
+                {% csrf_token %}
+                <!-- Formulario temporalmente desactivado hasta implementar la funcionalidad -->
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="id_peso" class="form-label">Peso (kg):</label>
+                        <input type="number" step="0.01" min="0" max="300" class="form-control" id="id_peso" name="peso" required>
+                        <div class="form-text">Ingrese el peso en kilogramos (ej. 75.5)</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_talla" class="form-label">Talla (cm):</label>
+                        <input type="number" step="0.01" min="0" max="250" class="form-control" id="id_talla" name="talla" required>
+                        <div class="form-text">Ingrese la altura en centímetros (ej. 170.5)</div>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i> El IMC se calculará automáticamente.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+    // Autocompletado para búsqueda de pacientes
+    document.addEventListener('DOMContentLoaded', function() {
+        const buscarPacienteInput = document.getElementById('buscarPaciente');
+        const resultadosAutocompletado = document.getElementById('resultadosAutocompletado');
+        const pacienteIdInput = document.getElementById('pacienteId');
+        
+        if (buscarPacienteInput) {
+            buscarPacienteInput.addEventListener('input', function() {
+                const query = this.value.trim();
+                
+                if (query.length < 3) {
+                    resultadosAutocompletado.classList.add('d-none');
+                    return;
+                }
+                
+                // Realizar petición AJAX para buscar pacientes
+                fetch(`/api/buscar-pacientes/?q=${query}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        resultadosAutocompletado.innerHTML = '';
+                        
+                        if (data.length > 0) {
+                            resultadosAutocompletado.classList.remove('d-none');
+                            
+                            data.forEach(paciente => {
+                                const item = document.createElement('div');
+                                item.className = 'p-2 border-bottom autocomplete-item';
+                                item.innerHTML = `<strong>${paciente.nombres} ${paciente.apellidos}</strong> - DNI: ${paciente.dni}`;
+                                
+                                item.addEventListener('click', function() {
+                                    buscarPacienteInput.value = `${paciente.nombres} ${paciente.apellidos} - ${paciente.dni}`;
+                                    pacienteIdInput.value = paciente.id;
+                                    resultadosAutocompletado.classList.add('d-none');
+                                });
+                                
+                                resultadosAutocompletado.appendChild(item);
+                            });
+                        } else {
+                            resultadosAutocompletado.classList.add('d-none');
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+            });
+            
+            // Cerrar autocompletado al hacer clic fuera
+            document.addEventListener('click', function(e) {
+                if (!buscarPacienteInput.contains(e.target) && !resultadosAutocompletado.contains(e.target)) {
+                    resultadosAutocompletado.classList.add('d-none');
+                }
+            });
+        }
+        
+        // Inicializar gráfico si existe el canvas y hay datos
+        const chartCanvas = document.getElementById('chartAntropometricos');
+        if (chartCanvas) {
+            // Obtener datos del elemento data-* en el canvas
+            const datosAntropometricos = document.getElementById('datos-antropometricos-json');
+            if (datosAntropometricos) {
+                try {
+                    const datos = JSON.parse(datosAntropometricos.textContent);
+                    const ctx = chartCanvas.getContext('2d');
+                    
+                    if (datos.fechas && datos.fechas.length > 0) {
+                        new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: datos.fechas,
+                                datasets: [
+                                    {
+                                        label: 'Peso (kg)',
+                                        data: datos.pesos,
+                                        borderColor: 'rgba(54, 162, 235, 1)',
+                                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                        borderWidth: 2,
+                                        fill: false,
+                                        tension: 0.1
+                                    },
+                                    {
+                                        label: 'IMC',
+                                        data: datos.imcs,
+                                        borderColor: 'rgba(255, 99, 132, 1)',
+                                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                                        borderWidth: 2,
+                                        fill: false,
+                                        tension: 0.1
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                scales: {
+                                    y: {
+                                        beginAtZero: false
+                                    }
+                                },
+                                plugins: {
+                                    tooltip: {
+                                        mode: 'index',
+                                        intersect: false
+                                    }
+                                }
+                            }
+                        });
+                    }
+                } catch (e) {
+                    console.error('Error al parsear datos antropométricos:', e);
+                }
+            }
+        }
+        
+        // Cálculo automático de IMC en el formulario
+        const pesoInput = document.getElementById('id_peso');
+        const tallaInput = document.getElementById('id_talla');
+        
+        if (pesoInput && tallaInput) {
+            const calcularIMC = function() {
+                const peso = parseFloat(pesoInput.value);
+                const talla = parseFloat(tallaInput.value);
+                
+                if (peso > 0 && talla > 0) {
+                    // Convertir talla de cm a metros
+                    const tallaMetros = talla / 100;
+                    const imc = (peso / (tallaMetros * tallaMetros)).toFixed(2);
+                    
+                    // Mostrar resultado
+                    let categoria = '';
+                    let color = '';
+                    
+                    if (imc < 18.5) {
+                        categoria = 'Bajo peso';
+                        color = 'info';
+                    } else if (imc < 25) {
+                        categoria = 'Normal';
+                        color = 'success';
+                    } else if (imc < 30) {
+                        categoria = 'Sobrepeso';
+                        color = 'warning';
+                    } else {
+                        categoria = 'Obesidad';
+                        color = 'danger';
+                    }
+                    
+                    // Crear o actualizar elemento de resultado
+                    let resultadoElement = document.getElementById('resultado-imc');
+                    if (!resultadoElement) {
+                        resultadoElement = document.createElement('div');
+                        resultadoElement.id = 'resultado-imc';
+                        resultadoElement.className = 'mt-3';
+                        tallaInput.parentNode.after(resultadoElement);
+                    }
+                    
+                    resultadoElement.innerHTML = `
+                        <div class="alert alert-${color}">
+                            <strong>IMC calculado:</strong> ${imc} - ${categoria}
+                        </div>
+                    `;
+                }
+            };
+            
+            pesoInput.addEventListener('input', calcularIMC);
+            tallaInput.addEventListener('input', calcularIMC);
+        }
+    });
+
     // Activar tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl)
     })
+    
+    // Funcionalidad de autocompletado para búsqueda de pacientes
+    $(document).ready(function() {
+        var timeoutId;
+        var resultadosContainer = $('#resultadosAutocompletado');
+        var inputBusqueda = $('#buscarPaciente');
+        var inputPacienteId = $('#pacienteId');
+        var formBusqueda = $('#formBusquedaPaciente');
+        
+        // Función para buscar pacientes
+        function buscarPacientes(query) {
+            $.ajax({
+                url: '/api/pacientes/buscar/',
+                type: 'GET',
+                data: { q: query },
+                dataType: 'json',
+                success: function(data) {
+                    // Limpiar resultados anteriores
+                    resultadosContainer.empty();
+                    
+                    if (data.length > 0) {
+                        // Mostrar resultados
+                        resultadosContainer.removeClass('d-none');
+                        
+                        // Crear lista de resultados
+                        var ul = $('<ul class="list-group list-group-flush"></ul>');
+                        
+                        // Añadir cada resultado a la lista
+                        $.each(data, function(index, paciente) {
+                            var li = $('<li class="list-group-item list-group-item-action py-2 cursor-pointer"></li>');
+                            li.css('cursor', 'pointer');
+                            
+                            // Destacar el DNI
+                            var html = '<div class="d-flex justify-content-between align-items-center">';
+                            html += '<div><strong>' + paciente.nombres + ' ' + paciente.apellidos + '</strong></div>';
+                            html += '<span class="badge bg-secondary">DNI: ' + paciente.dni + '</span></div>';
+                            
+                            li.html(html);
+                            
+                            // Evento al hacer clic en un resultado
+                            li.on('click', function() {
+                                inputBusqueda.val(paciente.nombres + ' ' + paciente.apellidos);
+                                inputPacienteId.val(paciente.id);
+                                resultadosContainer.addClass('d-none');
+                                formBusqueda.submit();
+                            });
+                            
+                            ul.append(li);
+                        });
+                        
+                        resultadosContainer.append(ul);
+                    } else {
+                        resultadosContainer.addClass('d-none');
+                    }
+                },
+                error: function() {
+                    resultadosContainer.addClass('d-none');
+                }
+            });
+        }
+        
+        // Evento de entrada de texto con debounce
+        inputBusqueda.on('input', function() {
+            var query = $(this).val().trim();
+            
+            // Limpiar timeout anterior
+            clearTimeout(timeoutId);
+            
+            // Si el campo está vacío, ocultar resultados
+            if (query.length < 2) {
+                resultadosContainer.addClass('d-none');
+                return;
+            }
+            
+            // Esperar 300ms antes de hacer la búsqueda para evitar demasiadas peticiones
+            timeoutId = setTimeout(function() {
+                buscarPacientes(query);
+            }, 300);
+        });
+        
+        // Ocultar resultados al hacer clic fuera
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#buscarPaciente, #resultadosAutocompletado').length) {
+                resultadosContainer.addClass('d-none');
+            }
+        });
+        
+        // Mostrar resultados al hacer foco en el input
+        inputBusqueda.on('focus', function() {
+            var query = $(this).val().trim();
+            if (query.length >= 2) {
+                buscarPacientes(query);
+            }
+        });
+    });
 </script>
 {% endblock %}

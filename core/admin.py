@@ -1,6 +1,10 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import *
+from .models import (
+    Rol, Usuario, Especialidad, Medico, Paciente, Consultorio,
+    DisponibilidadMedica, Derivacion, TratamientoProgramado, Cita,
+    DatosAntropometricos, Notificacion, HistorialMedico
+)
 
 # Configuración personalizada para el modelo Usuario
 class UsuarioAdmin(UserAdmin):
@@ -96,6 +100,17 @@ class HistorialMedicoAdmin(admin.ModelAdmin):
     search_fields = ('paciente__usuario__nombres', 'paciente__usuario__apellidos', 'diagnostico', 'tratamiento')
     date_hierarchy = 'fecha'
 
+# Configuración para el modelo DatosAntropometricos
+class DatosAntropometricosAdmin(admin.ModelAdmin):
+    list_display = ('paciente', 'fecha_registro', 'peso', 'talla', 'imc', 'get_categoria_imc', 'registrado_por')
+    list_filter = ('fecha_registro',)
+    search_fields = ('paciente__usuario__nombres', 'paciente__usuario__apellidos', 'registrado_por__nombres')
+    date_hierarchy = 'fecha_registro'
+    
+    def get_categoria_imc(self, obj):
+        return obj.get_categoria_imc()
+    get_categoria_imc.short_description = 'Categoría IMC'
+
 # Configuración para el modelo Notificacion
 class NotificacionAdmin(admin.ModelAdmin):
     list_display = ('usuario', 'tipo', 'fecha_envio', 'leido', 'importante')
@@ -120,4 +135,5 @@ admin.site.register(Cita, CitaAdmin)
 admin.site.register(Derivacion, DerivacionAdmin)
 admin.site.register(TratamientoProgramado, TratamientoProgramadoAdmin)
 admin.site.register(HistorialMedico, HistorialMedicoAdmin)
+admin.site.register(DatosAntropometricos, DatosAntropometricosAdmin)
 admin.site.register(Notificacion, NotificacionAdmin)

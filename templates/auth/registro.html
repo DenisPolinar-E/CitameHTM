@@ -1,101 +1,125 @@
 {% extends 'auth/base_auth.html' %}
+{% load static %}
 
 {% block title %}Registro de Paciente - Sistema de Gestión de Citas{% endblock %}
 
 {% block auth_title %}Registro{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/registro.css' %}">
+{% endblock %}
+
 {% block auth_content %}
 <form method="post" action="{% url 'registro' %}" class="registro-form">
     {% csrf_token %}
     
-    <div class="row">
-        <div class="col-md-6 mb-3">
-            <label for="nombres" class="form-label">Nombres</label>
-            <input type="text" class="form-control" id="nombres" name="nombres" placeholder="Ingrese sus nombres" required>
+    <!-- Información Personal -->
+    <div class="form-section">
+        <h4 class="form-section-title"><i class="fas fa-user"></i> Información Personal</h4>
+        <div class="row">
+            <div class="col-md-6 mb-3 field-group">
+                <label for="nombres" class="form-label"><i class="fas fa-signature"></i> Nombres</label>
+                <input type="text" class="form-control" id="nombres" name="nombres" placeholder="Ingrese sus nombres" required>
+            </div>
+            <div class="col-md-6 mb-3 field-group">
+                <label for="apellidos" class="form-label"><i class="fas fa-signature"></i> Apellidos</label>
+                <input type="text" class="form-control" id="apellidos" name="apellidos" placeholder="Ingrese sus apellidos" required>
+            </div>
         </div>
-        <div class="col-md-6 mb-3">
-            <label for="apellidos" class="form-label">Apellidos</label>
-            <input type="text" class="form-control" id="apellidos" name="apellidos" placeholder="Ingrese sus apellidos" required>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3 field-group">
+                <label for="dni" class="form-label"><i class="fas fa-id-card"></i> DNI</label>
+                <input type="text" class="form-control" id="dni" name="dni" placeholder="Ingrese su DNI (8 dígitos)" maxlength="8" required>
+                <div class="form-text">Su DNI será su nombre de usuario para iniciar sesión</div>
+            </div>
+            <div class="col-md-6 mb-3 field-group">
+                <label for="fecha_nacimiento" class="form-label"><i class="fas fa-calendar-alt"></i> Fecha de Nacimiento</label>
+                <input type="date" class="form-control" id="fecha_nacimiento" name="fecha_nacimiento" required>
+            </div>
         </div>
-    </div>
-    
-    <div class="row">
-        <div class="col-md-6 mb-3">
-            <label for="dni" class="form-label">DNI</label>
-            <input type="text" class="form-control" id="dni" name="dni" placeholder="Ingrese su DNI (8 dígitos)" maxlength="8" required>
-            <div class="form-text">Su DNI será su nombre de usuario para iniciar sesión</div>
-        </div>
-        <div class="col-md-6 mb-3">
-            <label for="fecha_nacimiento" class="form-label">Fecha de Nacimiento</label>
-            <input type="date" class="form-control" id="fecha_nacimiento" name="fecha_nacimiento" required>
-        </div>
-    </div>
-    
-    <div class="mb-3">
-        <label for="email" class="form-label">Correo Electrónico</label>
-        <input type="email" class="form-control" id="email" name="email" placeholder="ejemplo@correo.com" required>
-    </div>
-    
-    <div class="row">
-        <div class="col-md-6 mb-3">
-            <label for="sexo" class="form-label">Sexo</label>
-            <select class="form-select" id="sexo" name="sexo" required>
-                <option value="" selected disabled>Seleccione una opción</option>
-                <option value="M">Masculino</option>
-                <option value="F">Femenino</option>
-                <option value="O">Otro</option>
-            </select>
-        </div>
-        <div class="col-md-6 mb-3">
-            <label for="rol" class="form-label">Rol en el Sistema</label>
-            <select class="form-select" id="rol" name="rol" required>
-                <option value="" selected disabled>Seleccione un rol</option>
-                <option value="Paciente">Paciente</option>
-                <option value="Medico">Médico</option>
-                <option value="Admision">Admisión</option>
-                <option value="Administrador">Administrador</option>
-            </select>
-        </div>
-    </div>
-    
-    <!-- Campo de especialidad (visible solo cuando se selecciona Médico) -->
-    <div class="row" id="especialidadContainer" style="display: none;">
-        <div class="col-12 mb-3">
-            <label for="especialidad" class="form-label">Especialidad Médica</label>
-            <select class="form-select" id="especialidad" name="especialidad">
-                <option value="" selected disabled>Seleccione una especialidad</option>
-                {% for especialidad in especialidades %}
-                <option value="{{ especialidad.id }}">{{ especialidad.nombre }}</option>
-                {% endfor %}
-            </select>
-            <div class="form-text">Seleccione la especialidad médica a la que pertenece.</div>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3 field-group">
+                <label for="sexo" class="form-label"><i class="fas fa-venus-mars"></i> Sexo</label>
+                <select class="form-select" id="sexo" name="sexo" required>
+                    <option value="" selected disabled>Seleccione una opción</option>
+                    <option value="M">Masculino</option>
+                    <option value="F">Femenino</option>
+                    <option value="O">Otro</option>
+                </select>
+            </div>
+            <div class="col-md-6 mb-3 field-group">
+                <label for="rol" class="form-label"><i class="fas fa-user-tag"></i> Rol en el Sistema</label>
+                <select class="form-select" id="rol" name="rol" required>
+                    <option value="" selected disabled>Seleccione un rol</option>
+                    <option value="Paciente">Paciente</option>
+                    <option value="Medico">Médico</option>
+                    <option value="Admision">Admisión</option>
+                    <option value="Administrador">Administrador</option>
+                </select>
+            </div>
         </div>
     </div>
     
-    <div class="mb-3">
-        <label for="telefono" class="form-label">Teléfono</label>
-        <input type="tel" class="form-control" id="telefono" name="telefono" placeholder="Ingrese su número telefónico" required>
-    </div>
-    
-    <div class="mb-3">
-        <label for="direccion" class="form-label">Dirección</label>
-        <textarea class="form-control" id="direccion" name="direccion" rows="2" placeholder="Ingrese su dirección completa" required></textarea>
-    </div>
-    
-    <div class="row">
-        <div class="col-md-6 mb-3">
-            <label for="password" class="form-label">Contraseña</label>
-            <input type="password" class="form-control" id="password" name="password" placeholder="Ingrese su contraseña" required>
-        </div>
-        <div class="col-md-6 mb-3">
-            <label for="password2" class="form-label">Confirmar Contraseña</label>
-            <input type="password" class="form-control" id="password2" name="password2" placeholder="Confirme su contraseña" required>
+    <!-- Especialidad Médica (visible solo cuando se selecciona Médico) -->
+    <div class="form-section" id="especialidadContainer" style="display: none;">
+        <h4 class="form-section-title"><i class="fas fa-stethoscope"></i> Especialidad Médica</h4>
+        <div class="row">
+            <div class="col-12 mb-3 field-group">
+                <label for="especialidad" class="form-label"><i class="fas fa-hospital"></i> Especialidad</label>
+                <select class="form-select" id="especialidad" name="especialidad">
+                    <option value="" selected disabled>Seleccione una especialidad</option>
+                    {% for especialidad in especialidades %}
+                    <option value="{{ especialidad.id }}">{{ especialidad.nombre }}</option>
+                    {% endfor %}
+                </select>
+                <div class="form-text">Seleccione la especialidad médica a la que pertenece</div>
+            </div>
         </div>
     </div>
     
-    <div class="mb-3 form-check">
+    <!-- Información de Contacto -->
+    <div class="form-section">
+        <h4 class="form-section-title"><i class="fas fa-address-book"></i> Información de Contacto</h4>
+        <div class="mb-3 field-group">
+            <label for="email" class="form-label"><i class="fas fa-envelope"></i> Correo Electrónico</label>
+            <input type="email" class="form-control" id="email" name="email" placeholder="ejemplo@correo.com" required>
+        </div>
+        
+        <div class="mb-3 field-group">
+            <label for="telefono" class="form-label"><i class="fas fa-phone"></i> Teléfono</label>
+            <input type="tel" class="form-control" id="telefono" name="telefono" placeholder="Ingrese su número telefónico" required>
+        </div>
+        
+        <div class="mb-3 field-group">
+            <label for="direccion" class="form-label"><i class="fas fa-map-marker-alt"></i> Dirección</label>
+            <textarea class="form-control" id="direccion" name="direccion" rows="2" placeholder="Ingrese su dirección completa" required></textarea>
+        </div>
+    </div>
+    
+    <!-- Seguridad -->
+    <div class="form-section">
+        <h4 class="form-section-title"><i class="fas fa-lock"></i> Seguridad</h4>
+        <div class="row">
+            <div class="col-md-6 mb-3 field-group">
+                <label for="password" class="form-label"><i class="fas fa-key"></i> Contraseña</label>
+                <input type="password" class="form-control" id="password" name="password" placeholder="Ingrese su contraseña" required>
+                <div class="form-text">Use al menos 8 caracteres con letras y números</div>
+            </div>
+            <div class="col-md-6 mb-3 field-group">
+                <label for="password2" class="form-label"><i class="fas fa-key"></i> Confirmar Contraseña</label>
+                <input type="password" class="form-control" id="password2" name="password2" placeholder="Confirme su contraseña" required>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Términos y Condiciones -->
+    <div class="mb-4 form-check">
         <input type="checkbox" class="form-check-input" id="terminos" name="terminos" required>
-        <label class="form-check-label" for="terminos">Acepto los términos y condiciones</label>
+        <label class="form-check-label" for="terminos">
+            Acepto los <a href="#" data-bs-toggle="modal" data-bs-target="#terminosModal">términos y condiciones</a>
+        </label>
     </div>
     
     <div class="d-grid gap-2">
@@ -104,34 +128,120 @@
         </button>
     </div>
     
-    <p class="mt-3 text-center">
-        ¿Ya tienes una cuenta? <a href="{% url 'login' %}">Inicia sesión aquí</a>
-    </p>
+    <div class="auth-links mt-4 text-center">
+        <p>
+            ¿Ya tienes una cuenta? <a href="{% url 'login' %}">Inicia sesión aquí</a>
+        </p>
+    </div>
 </form>
 
+<!-- Modal de Términos y Condiciones -->
+<div class="modal fade" id="terminosModal" tabindex="-1" aria-labelledby="terminosModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="terminosModalLabel">Términos y Condiciones</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h5>Términos de Uso del Sistema de Gestión de Citas</h5>
+                <p>Al registrarse y utilizar el Sistema de Gestión de Citas del Hospital de Tingo María, usted acepta los siguientes términos y condiciones:</p>
+                
+                <h6>1. Registro y Cuenta</h6>
+                <p>Para utilizar el sistema, debe proporcionar información precisa y completa durante el proceso de registro. Usted es responsable de mantener la confidencialidad de su contraseña y cuenta, y acepta la responsabilidad por todas las actividades que ocurran bajo su cuenta.</p>
+                
+                <h6>2. Privacidad y Datos Personales</h6>
+                <p>La información proporcionada será utilizada exclusivamente para la gestión de citas médicas y servicios relacionados con la atención sanitaria. Sus datos serán tratados conforme a la legislación vigente sobre protección de datos personales.</p>
+                
+                <h6>3. Uso del Sistema</h6>
+                <p>El sistema debe ser utilizado únicamente para los fines previstos: gestión de citas médicas, consulta de historiales clínicos y comunicación con el personal sanitario. Queda prohibido cualquier uso fraudulento o que pueda causar daño al sistema o a terceros.</p>
+                
+                <h6>4. Responsabilidades</h6>
+                <p>El Hospital de Tingo María no se hace responsable por cancelaciones de citas debido a emergencias médicas o situaciones imprevistas. Los usuarios deben verificar regularmente el estado de sus citas programadas.</p>
+                
+                <h6>5. Modificaciones</h6>
+                <p>El Hospital de Tingo María se reserva el derecho de modificar estos términos y condiciones en cualquier momento. Los cambios serán notificados a través del sistema.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Entendido</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-    // JavaScript para mostrar/ocultar el campo de especialidad según el rol seleccionado
+    // JavaScript para mejorar la experiencia del formulario de registro
     document.addEventListener('DOMContentLoaded', function() {
+        // Variables para los elementos del formulario
         const rolSelect = document.getElementById('rol');
         const especialidadContainer = document.getElementById('especialidadContainer');
         const especialidadSelect = document.getElementById('especialidad');
+        const passwordInput = document.getElementById('password');
+        const password2Input = document.getElementById('password2');
+        const form = document.querySelector('.registro-form');
         
         // Función para mostrar/ocultar el campo de especialidad
         function toggleEspecialidadField() {
             if (rolSelect.value === 'Medico') {
                 especialidadContainer.style.display = 'block';
                 especialidadSelect.setAttribute('required', 'required');
+                // Animación suave
+                setTimeout(() => {
+                    especialidadContainer.style.opacity = '1';
+                    especialidadContainer.style.transform = 'translateY(0)';
+                }, 10);
             } else {
-                especialidadContainer.style.display = 'none';
-                especialidadSelect.removeAttribute('required');
+                especialidadContainer.style.opacity = '0';
+                especialidadContainer.style.transform = 'translateY(-10px)';
+                setTimeout(() => {
+                    especialidadContainer.style.display = 'none';
+                    especialidadSelect.removeAttribute('required');
+                }, 300);
             }
         }
+        
+        // Estilo inicial para el contenedor de especialidad
+        especialidadContainer.style.transition = 'all 0.3s ease';
+        especialidadContainer.style.opacity = '0';
+        especialidadContainer.style.transform = 'translateY(-10px)';
         
         // Verificar el estado inicial
         toggleEspecialidadField();
         
         // Agregar evento change al select de rol
         rolSelect.addEventListener('change', toggleEspecialidadField);
+        
+        // Validación de contraseñas
+        function validatePasswords() {
+            if (passwordInput.value !== password2Input.value) {
+                password2Input.setCustomValidity('Las contraseñas no coinciden');
+            } else {
+                password2Input.setCustomValidity('');
+            }
+        }
+        
+        passwordInput.addEventListener('change', validatePasswords);
+        password2Input.addEventListener('keyup', validatePasswords);
+        
+        // Mejora visual para los campos cuando reciben foco
+        const formControls = document.querySelectorAll('.form-control, .form-select');
+        formControls.forEach(control => {
+            control.addEventListener('focus', function() {
+                this.closest('.field-group').classList.add('focused');
+            });
+            
+            control.addEventListener('blur', function() {
+                this.closest('.field-group').classList.remove('focused');
+            });
+        });
+        
+        // Validación del formulario antes de enviar
+        form.addEventListener('submit', function(event) {
+            if (passwordInput.value !== password2Input.value) {
+                event.preventDefault();
+                alert('Las contraseñas no coinciden. Por favor, verifíquelas.');
+            }
+        });
     });
 </script>
 {% endblock %}

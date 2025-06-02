@@ -1,0 +1,794 @@
+﻿
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.db.models import Q, Count
+from django.utils import timezone
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from .models import *
+from .forms import *
+import json
+from datetime import datetime, timedelta
+
+# Vistas pÃºblicas
+def home(request):
+    """Vista de la pÃ¡gina de bienvenida"""
+    return render(request, 'home.html')
+
+def login_view(request):
+    """Vista de inicio de sesiÃ³n"""
+    if request.method == 'POST':
+        dni = request.POST.get('dni')
+        password = request.POST.get('password')
+        user = authenticate(request, username=dni, password=password)
+        
+        if user is not None:
+            login(request, user)
+            
+            # RedirecciÃ³n segÃºn el rol del usuario
+            if user.rol:
+                if user.rol.nombre == 'Paciente':
+                    return redirect('dashboard_paciente')
+                elif user.rol.nombre == 'MÃ©dico':
+                    return redirect('dashboard_medico')
+                elif user.rol.nombre == 'AdmisiÃ³n':
+                    return redirect('dashboard_admision')
+                elif user.rol.nombre == 'Administrador':
+                    return redirect('dashboard_admin')
+            
+            # Si no tiene rol asignado, redirigir a la pÃ¡gina principal
+            return redirect('home')
+        else:
+            messages.error(request, 'DNI o contraseÃ±a incorrectos')
+    
+    return render(request, 'auth/login.html')
+
+def registro_view(request):
+    """Vista de registro de usuarios con selecciÃ³n de rol"""
+    # Cargar todas las especialidades para el formulario
+    from .models import Especialidad
+    especialidades = Especialidad.objects.all().order_by('nombre')
+    
+    if request.method == 'POST':
+        form = RegistroPacienteForm(request.POST)
+        if form.is_valid():
+            # Crear usuario
+            user = form.save(commit=False)
+            user.username = form.cleaned_data.get('dni')  # Usar DNI como 
+nombre de usuario
+            user.set_password(form.cleaned_data.get('password'))
+            
+            # Obtener el rol seleccionado
+            rol_nombre = request.POST.get('rol')
+            rol, created = Rol.objects.get_or_create(nombre=rol_nombre)
+            user.rol = rol
+            user.save()
+            
+            # Crear perfil segÃºn el rol
+            if rol_nombre == 'Paciente':
+                Paciente.objects.create(usuario=user)
+            elif rol_nombre == 'Medico':
+                # Para mÃ©dicos, usar la especialidad seleccionada o una 
+por defecto
+                from .models import Medico
+                especialidad_id = request.POST.get('especialidad')
+                
+                try:
+                    if especialidad_id and especialidad_id.isdigit():
+                        especialidad = 
+Especialidad.objects.get(id=especialidad_id)
+                    else:
+                        # Si no se seleccionÃ³ especialidad, usar General 
+como predeterminada
+                        especialidad, _ = 
+Especialidad.objects.get_or_create(nombre='General')
+                except Especialidad.DoesNotExist:
+                    especialidad, _ = 
+Especialidad.objects.get_or_create(nombre='General')
+                
+                # Asignar un CMP provisional que se actualizarÃ¡ despuÃ©s
+                cmp_provisional = f"TEMP-{user.dni}"
+                Medico.objects.create(usuario=user, 
+especialidad=especialidad, cmp=cmp_provisional)
+            
+            # Iniciar sesiÃ³n automÃ¡ticamente
+            login(request, user)
+            messages.success(request, f'Â¡Registro exitoso como 
+{rol_nombre}! Bienvenido al sistema.')
+            
+            # Redireccionar segÃºn el rol
+            if rol_nombre == 'Paciente':
+                return redirect('dashboard_paciente')
+            elif rol_nombre == 'Medico':
+                return redirect('dashboard_medico')
+            elif rol_nombre == 'Admision':
+                return redirect('dashboard_admision')
+            elif rol_nombre == 'Administrador':
+                return redirect('dashboard_admin')
+            return redirect('dashboard')
+    else:
+        form = RegistroPacienteForm()
+    
+    return render(request, 'auth/registro.html', {
+        'form': form,
+        'especialidades': especialidades
+    })
+
+def logout_view(request):
+    """Cerrar sesiÃ³n"""
+    logout(request)
+    return redirect('home')
+
+# Vistas protegidas por rol
+@login_required
+def dashboard_view(request):
+    """Redirecciona al dashboard especÃ­fico segÃºn el rol del usuario"""
+    if request.user.rol:
+        if request.user.rol.nombre == 'Paciente':
+            return redirect('dashboard_paciente')
+        elif request.user.rol.nombre == 'Medico':
+            return redirect('dashboard_medico')
+        elif request.user.rol.nombre == 'Admision':
+            return redirect('dashboard_admision')
+        elif request.user.rol.nombre == 'Administrador':
+            return redirect('dashboard_admin')
+    
+    # Si no tiene rol asignado, mostrar mensaje y redirigir a home
+    messages.warning(request, 'No tienes un rol asignado en el sistema.')
+    return redirect('home')
+
+# Dashboards por rol
+@login_required
+def dashboard_paciente(request):
+    """Dashboard para pacientes"""
+    # Verificar que el usuario tenga el rol correcto
+    if not request.user.rol or request.user.rol.nombre != 'Paciente':
+        messages.error(request, 'No tienes permiso para acceder a esta 
+pÃ¡gina')
+        return redirect('home')
+    
+    try:
+        paciente = request.user.paciente
+        
+        # Obtener prÃ³ximas citas
+        proximas_citas = Cita.objects.filter(
+            paciente=paciente,
+            fecha__gte=timezone.now().date(),
+            estado__in=['pendiente', 'confirmada']
+        ).order_by('fecha', 'hora_inicio')[:5]
+        
+        # Obtener historial mÃ©dico
+        historial = 
+HistorialMedico.objects.filter(paciente=paciente).order_by('-fecha')[:5]
+        
+        # Obtener derivaciones activas
+        derivaciones = Derivacion.objects.filter(
+            paciente=paciente,
+            estado='pendiente',
+            fecha_derivacion__gte=timezone.now().date() - 
+timedelta(days=30)
+        )
+        
+        # Obtener notificaciones no leÃ­das
+        notificaciones = Notificacion.objects.filter(
+            usuario=request.user,
+            leido=False
+        ).order_by('-fecha_envio')[:5]
+        
+        context = {
+            'proximas_citas': proximas_citas,
+            'historial': historial,
+            'derivaciones': derivaciones,
+            'notificaciones': notificaciones,
+        }
+        
+        return render(request, 'dashboard/paciente/dashboard.html', 
+context)
+    except Paciente.DoesNotExist:
+        messages.error(request, 'No se encontrÃ³ el perfil de paciente')
+        return redirect('home')
+
+@login_required
+def dashboard_medico(request):
+    """Dashboard para mÃ©dicos"""
+    # Verificar que el usuario tenga el rol correcto
+    if not request.user.rol or request.user.rol.nombre != 'Medico':
+        messages.error(request, 'No tienes permiso para acceder a esta 
+pÃ¡gina')
+        return redirect('home')
+    
+    try:
+        medico = request.user.medico
+        
+        # Obtener citas del dÃ­a
+        hoy = timezone.now().date()
+        citas_hoy = Cita.objects.filter(
+            medico=medico,
+            fecha=hoy,
+            estado__in=['pendiente', 'confirmada']
+        ).order_by('hora_inicio')
+        
+        # Obtener prÃ³ximas citas (excluyendo hoy)
+        proximas_citas = Cita.objects.filter(
+            medico=medico,
+            fecha__gt=hoy,
+            estado__in=['pendiente', 'confirmada']
+        ).order_by('fecha', 'hora_inicio')[:10]
+        
+        # Obtener derivaciones realizadas recientemente
+        derivaciones = Derivacion.objects.filter(
+            medico_origen=medico
+        ).order_by('-fecha_derivacion')[:5]
+        
+        # Obtener notificaciones no leÃ­das
+        notificaciones = Notificacion.objects.filter(
+            usuario=request.user,
+            leido=False
+        ).order_by('-fecha_envio')[:5]
+        
+        context = {
+            'citas_hoy': citas_hoy,
+            'proximas_citas': proximas_citas,
+            'derivaciones': derivaciones,
+            'notificaciones': notificaciones,
+        }
+        
+        return render(request, 'dashboard/medico/dashboard.html', context)
+    except Medico.DoesNotExist:
+        messages.error(request, 'No se encontrÃ³ el perfil de mÃ©dico')
+        return redirect('home')
+
+@login_required
+def dashboard_admision(request):
+    """Dashboard para personal de admisiÃ³n"""
+    # Verificar que el usuario tenga el rol correcto
+    if not request.user.rol or request.user.rol.nombre != 'Admision':
+        messages.error(request, 'No tienes permiso para acceder a esta 
+pÃ¡gina')
+        return redirect('home')
+    
+    # Obtener citas del dÃ­a
+    hoy = timezone.now().date()
+    citas_hoy = Cita.objects.filter(
+        fecha=hoy,
+        estado__in=['pendiente', 'confirmada']
+    ).order_by('hora_inicio')
+    
+    # Obtener pacientes con faltas consecutivas
+    pacientes_faltas = Paciente.objects.filter(faltas_consecutivas__gt=0).
+order_by('-faltas_consecutivas')
+    
+    # Obtener notificaciones no leÃ­das
+    notificaciones = Notificacion.objects.filter(
+        usuario=request.user,
+        leido=False
+    ).order_by('-fecha_envio')[:5]
+    
+    context = {
+        'citas_hoy': citas_hoy,
+        'pacientes_faltas': pacientes_faltas,
+        'notificaciones': notificaciones,
+    }
+    
+    return render(request, 'dashboard/admision/dashboard.html', context)
+
+@login_required
+def dashboard_admin(request):
+    """Dashboard para administradores"""
+    # Verificar que el usuario tenga el rol correcto
+    if not request.user.rol or request.user.rol.nombre != 'Administrador':
+        messages.error(request, 'No tienes permiso para acceder a esta 
+pÃ¡gina')
+        return redirect('home')
+    
+    # EstadÃ­sticas generales
+    total_pacientes = Paciente.objects.count()
+    total_medicos = Medico.objects.count()
+    total_citas = Cita.objects.count()
+    citas_pendientes = Cita.objects.filter(estado='pendiente').count()
+    citas_atendidas = Cita.objects.filter(estado='atendida').count()
+    
+    # Citas por especialidad
+    citas_por_especialidad = 
+Cita.objects.values('medico__especialidad__nombre').annotate(
+        total=Count('id')
+    ).order_by('-total')[:5]
+    
+    # Obtener notificaciones no leÃ­das
+    notificaciones = Notificacion.objects.filter(
+        usuario=request.user,
+        leido=False
+    ).order_by('-fecha_envio')[:5]
+    
+    context = {
+        'total_pacientes': total_pacientes,
+        'total_medicos': total_medicos,
+        'total_citas': total_citas,
+        'citas_pendientes': citas_pendientes,
+        'citas_atendidas': citas_atendidas,
+        'citas_por_especialidad': citas_por_especialidad,
+        'notificaciones': notificaciones,
+    }
+    
+    return render(request, 'dashboard/admin/dashboard.html', context)
+
+# API para dashboard dinÃ¡mico
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def api_dashboard(request):
+    """Endpoint para obtener datos del dashboard segÃºn el rol del 
+usuario"""
+    user = request.user
+    data = {}
+    menu = []
+    
+    # Verificar rol del usuario
+    if not user.rol:
+        return Response({'error': 'Usuario sin rol asignado'}, status=400)
+    
+    # Generar menÃº segÃºn el rol
+    if user.rol.nombre == 'Paciente':
+        # Datos especÃ­ficos para pacientes
+        try:
+            paciente = user.paciente
+            
+            # PrÃ³ximas citas
+            proximas_citas = Cita.objects.filter(
+                paciente=paciente,
+                fecha__gte=timezone.now().date(),
+                estado__in=['pendiente', 'confirmada']
+            ).order_by('fecha', 'hora_inicio')[:5]
+            
+            data['proximas_citas'] = [{
+                'id': cita.id,
+                'medico': f"Dr. {cita.medico.usuario.nombres} 
+{cita.medico.usuario.apellidos}",
+                'especialidad': cita.medico.especialidad.nombre,
+                'fecha': cita.fecha.strftime('%d/%m/%Y'),
+                'hora': cita.hora_inicio.strftime('%H:%M'),
+                'consultorio': cita.consultorio.codigo,
+                'estado': cita.get_estado_display()
+            } for cita in proximas_citas]
+            
+            # Notificaciones no leÃ­das
+            notificaciones = Notificacion.objects.filter(
+                usuario=user,
+                leido=False
+            ).count()
+            
+            data['notificaciones_no_leidas'] = notificaciones
+            
+            # MenÃº para pacientes
+            menu = [
+                {'nombre': 'Mis Citas', 'icono': 'fa-calendar-check', 
+'ruta': '/mis-citas/'},
+                {'nombre': 'Reservar Cita', 'icono': 'fa-calendar-plus', 
+'ruta': '/reservar-cita/'},
+                {'nombre': 'Historial MÃ©dico', 'icono': 
+'fa-file-medical-alt', 'ruta': '/mi-historial-medico/'},
+                {'nombre': 'Mis Tratamientos', 'icono': 
+'fa-clipboard-list', 'ruta': '/mis-tratamientos/'},
+                {'nombre': 'Mis Derivaciones', 'icono': 
+'fa-exchange-alt', 'ruta': '/derivaciones/'},
+                {'nombre': 'Mi Perfil', 'icono': 'fa-user', 'ruta': 
+'/perfil/paciente/'},
+                {'nombre': 'Notificaciones', 'icono': 'fa-bell', 'ruta': 
+'/notificaciones/'}
+            ]
+            
+        except Paciente.DoesNotExist:
+            return Response({'error': 'Perfil de paciente no 
+encontrado'}, status=404)
+            
+    elif user.rol.nombre == 'Medico':
+        # Datos especÃ­ficos para mÃ©dicos
+        try:
+            medico = user.medico
+            
+            # Citas del dÃ­a
+            hoy = timezone.now().date()
+            citas_hoy = Cita.objects.filter(
+                medico=medico,
+                fecha=hoy,
+                estado__in=['pendiente', 'confirmada']
+            ).order_by('hora_inicio')
+            
+            data['citas_hoy'] = [{
+                'id': cita.id,
+                'paciente': f"{cita.paciente.usuario.nombres} 
+{cita.paciente.usuario.apellidos}",
+                'hora': cita.hora_inicio.strftime('%H:%M'),
+                'consultorio': cita.consultorio.codigo,
+                'estado': cita.get_estado_display()
+            } for cita in citas_hoy]
+            
+            # Notificaciones no leÃ­das
+            notificaciones = Notificacion.objects.filter(
+                usuario=user,
+                leido=False
+            ).count()
+            
+            data['notificaciones_no_leidas'] = notificaciones
+            
+            # MenÃº para mÃ©dicos
+            menu = [
+                {'nombre': 'Mi Agenda', 'icono': 'fa-calendar-alt', 
+'ruta': '/agenda/'},
+                {'nombre': 'GestiÃ³n de Citas', 'icono': 
+'fa-calendar-week', 'ruta': '/gestion-citas/'},
+                {'nombre': 'Atender Pacientes', 'icono': 
+'fa-stethoscope', 'ruta': '/atencion/'},
+                {'nombre': 'Gestionar Horario', 'icono': 'fa-clock', 
+'ruta': '/disponibilidad/'},
+                {'nombre': 'Historial MÃ©dico', 'icono': 
+'fa-file-medical', 'ruta': '/historial-medico/'},
+                {'nombre': 'Derivar a Especialista', 'icono': 'fa-share', 
+'ruta': '/derivaciones/'},
+                {'nombre': 'Programar Seguimientos', 'icono': 'fa-tasks', 
+'ruta': '/seguimientos/'},
+                {'nombre': 'Mi Perfil', 'icono': 'fa-user', 'ruta': 
+'/perfil/medico/'},
+                {'nombre': 'Notificaciones', 'icono': 'fa-bell', 'ruta': 
+'/notificaciones/'}
+            ]
+            
+            # Incluir menÃº en la respuesta
+            data['menu'] = menu
+            
+        except Medico.DoesNotExist:
+            return Response({'error': 'Perfil de mÃ©dico no encontrado'}, 
+status=404)
+            
+    elif user.rol.nombre == 'Admision':
+        # Datos especÃ­ficos para personal de admisiÃ³n
+        # Citas del dÃ­a
+        hoy = timezone.now().date()
+        citas_hoy = Cita.objects.filter(
+            fecha=hoy,
+            estado__in=['pendiente', 'confirmada']
+        ).order_by('hora_inicio')[:10]
+        
+        data['citas_hoy'] = [{
+            'id': cita.id,
+            'paciente': f"{cita.paciente.usuario.nombres} 
+{cita.paciente.usuario.apellidos}",
+            'medico': f"Dr. {cita.medico.usuario.nombres} 
+{cita.medico.usuario.apellidos}",
+            'especialidad': cita.medico.especialidad.nombre,
+            'hora': cita.hora_inicio.strftime('%H:%M'),
+            'consultorio': cita.consultorio.codigo,
+            'estado': cita.get_estado_display()
+        } for cita in citas_hoy]
+        
+        # Notificaciones no leÃ­das
+        notificaciones = Notificacion.objects.filter(
+            usuario=user,
+            leido=False
+        ).count()
+        
+        data['notificaciones_no_leidas'] = notificaciones
+        
+        # MenÃº para personal de admisiÃ³n
+        menu = [
+            {'nombre': 'Registrar Cita', 'icono': 'fa-calendar-plus', 
+'ruta': '/citas/crear/'},
+            {'nombre': 'Buscar Paciente', 'icono': 'fa-search', 'ruta': 
+'/buscar-paciente/'},
+            {'nombre': 'Disponibilidad MÃ©dica', 'icono': 
+'fa-clipboard-check', 'ruta': '/disponibilidad/'},
+            {'nombre': 'Justificar Inasistencia', 'icono': 
+'fa-exclamation-triangle', 'ruta': '/inasistencias/'},
+            {'nombre': 'Mi Perfil', 'icono': 'fa-user', 'ruta': 
+'/perfil/admision/'},
+            {'nombre': 'Notificaciones', 'icono': 'fa-bell', 'ruta': 
+'/notificaciones/'}
+        ]
+        
+        # Incluir menÃº en la respuesta
+        data['menu'] = menu
+        
+    elif user.rol.nombre == 'Administrador':
+        # Datos especÃ­ficos para administradores
+        # EstadÃ­sticas generales
+        total_pacientes = Paciente.objects.count()
+        total_medicos = Medico.objects.count()
+        total_citas = Cita.objects.count()
+        citas_pendientes = Cita.objects.filter(estado='pendiente').count()
+        citas_atendidas = Cita.objects.filter(estado='atendida').count()
+        
+        data['estadisticas'] = {
+            'total_pacientes': total_pacientes,
+            'total_medicos': total_medicos,
+            'total_citas': total_citas,
+            'citas_pendientes': citas_pendientes,
+            'citas_atendidas': citas_atendidas
+        }
+        
+        # Notificaciones no leÃ­das
+        notificaciones = Notificacion.objects.filter(
+            usuario=user,
+            leido=False
+        ).count()
+        
+        data['notificaciones_no_leidas'] = notificaciones
+        
+        menu = [
+            {
+                'nombre': 'AnÃ¡lisis Temporal',
+                'icono': 'fa-clock',
+                'ruta': '#',
+                'es_desplegable': True,
+                'id': 'analisisTemporalDropdown',
+                'submenus': [
+                    {
+                        'nombre': 'DistribuciÃ³n de Citas',
+                        'icono': 'fa-chart-bar',
+                        'ruta': 
+'/reportes/analisis-temporal/distribucion/'
+                    },
+                    {
+                        'nombre': 'Comparativas',
+                        'icono': 'fa-chart-line',
+                        'ruta': 
+'/reportes/analisis-temporal/comparativas/'
+                    },
+                    {
+                        'nombre': 'Tendencias',
+                        'icono': 'fa-chart-area',
+                        'ruta': '/reportes/analisis-temporal/tendencias/'
+                    },
+                    {
+                        'nombre': 'Tasas de Asistencia',
+                        'icono': 'fa-percentage',
+                        'ruta': '/reportes/analisis-temporal/tasas/'
+                    }
+                ]
+            },
+            {
+                'nombre': 'AnÃ¡lisis por Origen',
+                'icono': 'fa-sitemap',
+                'ruta': '#',
+                'es_desplegable': True,
+                'id': 'analisisOrigenDropdown',
+                'submenus': [
+                    {
+                        'nombre': 'AdmisiÃ³n',
+                        'icono': 'fa-clipboard-list',
+                        'ruta': '/reportes/analisis-origen/admision/'
+                    },
+                    {
+                        'nombre': 'DerivaciÃ³n',
+                        'icono': 'fa-share-nodes',
+                        'ruta': '/reportes/analisis-origen/derivacion/'
+                    },
+                    {
+                        'nombre': 'Seguimiento',
+                        'icono': 'fa-clipboard-check',
+                        'ruta': '/reportes/analisis-origen/seguimiento/'
+                    }
+                ]
+            },
+            {
+                'nombre': 'AnÃ¡lisis por Especialidad',
+                'icono': 'fa-stethoscope',
+                'ruta': '/reportes/analisis-especialidad/'
+            },
+            {
+                'nombre': 'AnÃ¡lisis por MÃ©dico',
+                'icono': 'fa-user-md',
+                'ruta': '/reportes/analisis-medico/'
+            },
+            {
+                'nombre': 'AnÃ¡lisis de Estado',
+                'icono': 'fa-list-check',
+                'ruta': '#',
+                'es_desplegable': True,
+                'id': 'analisisEstadoDropdown',
+                'submenus': [
+                    {
+                        'nombre': 'Citas Completadas',
+                        'icono': 'fa-check-circle',
+                        'ruta': '/reportes/analisis-estado/completadas/'
+                    },
+                    {
+                        'nombre': 'Citas Canceladas',
+                        'icono': 'fa-times-circle',
+                        'ruta': '/reportes/analisis-estado/canceladas/'
+                    },
+                    {
+                        'nombre': 'Inasistencias',
+                        'icono': 'fa-calendar-xmark',
+                        'ruta': '/reportes/analisis-estado/inasistencias/'
+                    }
+                ]
+            },
+            {
+                'nombre': 'Reportes Especiales',
+                'icono': 'fa-file-alt',
+                'ruta': '#',
+                'es_desplegable': True,
+                'id': 'reportesEspecialesDropdown',
+                'submenus': [
+                    {
+                        'nombre': 'Pacientes',
+                        'icono': 'fa-users',
+                        'ruta': '/reportes/especiales/pacientes/'
+                    },
+                    {
+                        'nombre': 'SatisfacciÃ³n',
+                        'icono': 'fa-smile',
+                        'ruta': '/reportes/especiales/satisfaccion/'
+                    },
+                    {
+                        'nombre': 'Indicadores Clave',
+                        'icono': 'fa-key',
+                        'ruta': '/reportes/especiales/indicadores/'
+                    }
+                ]
+            },
+            {
+                'nombre': 'Control de Inasistencias',
+                'icono': 'fa-calendar-xmark',
+                'ruta': '/admin/inasistencias/'
+            },
+            {
+                'nombre': 'Usuarios del Sistema',
+                'icono': 'fa-users-gear',
+                'ruta': '/admin/usuarios/'
+            },
+            {
+                'nombre': 'Historial MÃ©dico',
+                'icono': 'fa-notes-medical',
+                'ruta': '/admin/historial/'
+            },
+            {
+                'nombre': 'Mi Perfil',
+                'icono': 'fa-user',
+                'ruta': '/admin/perfil/'
+            },
+            {
+                'nombre': 'Notificaciones',
+                'icono': 'fa-bell',
+                'ruta': '/admin/notificaciones/'
+            }
+        ] # Incluir menÃº en la respuesta
+    data['menu'] = menu
+    
+    return Response(data)
+
+
+# APIs para notificaciones
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def marcar_notificacion_leida(request):
+    """Marca una notificaciÃ³n como leÃ­da"""
+    try:
+        data = json.loads(request.body)
+        notificacion_id = data.get('notificacion_id')
+        
+        if not notificacion_id:
+            return JsonResponse({'error': 'ID de notificaciÃ³n 
+requerido'}, status=400)
+        
+        notificacion = get_object_or_404(Notificacion, 
+id=notificacion_id, usuario=request.user)
+        notificacion.leido = True
+        notificacion.fecha_lectura = timezone.now()
+        notificacion.save()
+        
+        return JsonResponse({'success': True, 'message': 'NotificaciÃ³n 
+marcada como leÃda'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def contador_notificaciones(request):
+    """Devuelve el nÃºmero de notificaciones no leÃ­das del usuario"""
+    try:
+        no_leidas = Notificacion.objects.filter(usuario=request.user, 
+leido=False).count()
+        return JsonResponse({'success': True, 'no_leidas': no_leidas})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+# Vistas para reportes y análisis estadísticos
+@login_required
+    ""
+    Vista para mostrar la distribución de citas en diferentes períodos de 
+tiempo.
+    Permite filtrar por especialidad, médico y rango de fechas.
+    ""
+    # Obtener especialidades para el filtro
+    especialidades = Especialidad.objects.all().order_by('nombre')
+    
+    # Obtener todos los médicos para el filtro
+    medicos = Medico.objects.all().select_related('usuario', 
+'especialidad')
+    
+    # Configurar fechas predeterminadas (último mes)
+    fecha_fin = timezone.now().date()
+    fecha_inicio = fecha_fin - timedelta(days=30)
+    
+    context = {
+        'especialidades': especialidades,
+        'medicos': medicos,
+        'fecha_inicio': fecha_inicio.strftime('%Y-%m-%d'),
+        'fecha_fin': fecha_fin.strftime('%Y-%m-%d'),
+        'titulo': 'Distribución de Citas',
+        'subtitulo': 'Análisis Temporal'
+    }
+    
+    return render(request, 'admin/distribucion_citas.html', context)
+
+
+@login_required
+def api_medicos_por_especialidad(request):
+    ""
+    API endpoint para obtener médicos filtrados por especialidad.
+    ""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # Obtener el ID de la especialidad de la petición
+    especialidad_id = request.GET.get('especialidad_id', '0')
+    logger.info(f"API medicos_por_especialidad llamada con 
+especialidad_id={especialidad_id}")
+    
+    # Lista para almacenar los médicos
+    medicos_lista = []
+    
+    try:
+        # Si se seleccionó una especialidad específica (diferente de 
+'Todas')
+        if especialidad_id and especialidad_id != '0':
+            # Consultar los médicos que pertenecen a esa especialidad
+            medicos = 
+Medico.objects.filter(especialidad_id=especialidad_id)
+            logger.info(f"Encontrados {medicos.count()} médicos para la 
+especialidad {especialidad_id}")
+        else:
+            # Si no se seleccionó especialidad o se seleccionó 'Todas', 
+mostrar todos los médicos
+            medicos = Medico.objects.all()
+            logger.info(f"Mostrando todos los médicos: {medicos.count()} 
+encontrados")
+        
+        # Formatear datos para el frontend
+        for medico in medicos:
+            nombre_completo = f"{medico.usuario.nombres} 
+{medico.usuario.apellidos}"
+            medico_data = {
+                'id': medico.id,
+                'nombre_completo': nombre_completo
+            }
+            medicos_lista.append(medico_data)
+    
+    except Exception as e:
+        logger.error(f"Error al obtener médicos: {str(e)}")
+        return JsonResponse({'medicos': [], 'error': str(e), 'status': 
+'error'})
+    
+    # Devolver la lista de médicos en formato JSON
+    response = {
+        'medicos': medicos_lista,
+        'status': 'success',
+        'count': len(medicos_lista),
+        'especialidad_id': especialidad_id
+    }
+    
+    return JsonResponse(response)
+
+# Imports adicionales para reportes
+from django.http import JsonResponse
+from datetime import timedelta
+
+

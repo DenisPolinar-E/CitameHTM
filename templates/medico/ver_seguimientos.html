@@ -1,0 +1,235 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Seguimientos - Médico{% endblock %}
+
+{% block page_title %}Gestión de Seguimientos{% endblock %}
+
+{% block sidebar_menu %}
+<a href="{% url 'dashboard_medico' %}" class="menu-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="{% url 'agenda_medico' %}" class="menu-item"><i class="fas fa-calendar-alt"></i> Mi Agenda</a>
+<a href="{% url 'gestion_citas' %}" class="menu-item"><i class="fas fa-calendar-check"></i> Gestión de Citas</a>
+<a href="{% url 'historial_medico' %}" class="menu-item"><i class="fas fa-file-medical-alt"></i> Historial Médico</a>
+<a href="{% url 'ver_seguimientos' %}" class="menu-item active"><i class="fas fa-clipboard-list"></i> Seguimientos</a>
+<a href="{% url 'programar_seguimientos' %}" class="menu-item"><i class="fas fa-calendar-plus"></i> Programar Seguimiento</a>
+<a href="{% url 'perfil_medico' %}" class="menu-item"><i class="fas fa-user-md"></i> Mi Perfil</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .card-header {
+        border-radius: 10px 10px 0 0 !important;
+        font-weight: 600;
+    }
+    .tratamiento-card {
+        transition: all 0.3s ease;
+        cursor: pointer;
+        border-left: 4px solid #1976d2;
+    }
+    .tratamiento-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    .tratamiento-card.activo {
+        border-left-color: #4caf50;
+    }
+    .tratamiento-card.terminado {
+        border-left-color: #9e9e9e;
+    }
+    .tratamiento-card.cancelado {
+        border-left-color: #f44336;
+    }
+    .badge-activo {
+        background-color: #4caf50;
+        color: white;
+    }
+    .badge-terminado {
+        background-color: #9e9e9e;
+        color: white;
+    }
+    .badge-cancelado {
+        background-color: #f44336;
+        color: white;
+    }
+    .progress {
+        height: 10px;
+        border-radius: 5px;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+    }
+    .empty-state i {
+        font-size: 4rem;
+        color: #e0e0e0;
+        margin-bottom: 20px;
+    }
+    .filter-bar {
+        background-color: #f5f5f5;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="filter-bar d-flex align-items-center justify-content-between">
+                <div>
+                    <h5 class="mb-0">Filtrar por estado:</h5>
+                    <div class="btn-group mt-2">
+                        <a href="{% url 'ver_seguimientos' %}" class="btn btn-sm {% if not estado_filtro %}btn-primary{% else %}btn-outline-primary{% endif %}">Todos</a>
+                        <a href="{% url 'ver_seguimientos' %}?estado=activo" class="btn btn-sm {% if estado_filtro == 'activo' %}btn-success{% else %}btn-outline-success{% endif %}">Activos</a>
+                        <a href="{% url 'ver_seguimientos' %}?estado=terminado" class="btn btn-sm {% if estado_filtro == 'terminado' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">Terminados</a>
+                        <a href="{% url 'ver_seguimientos' %}?estado=cancelado" class="btn btn-sm {% if estado_filtro == 'cancelado' %}btn-danger{% else %}btn-outline-danger{% endif %}">Cancelados</a>
+                    </div>
+                </div>
+                <a href="{% url 'programar_seguimientos' %}" class="btn btn-primary">
+                    <i class="fas fa-plus-circle me-2"></i> Nuevo Tratamiento
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-clipboard-list me-2"></i> Tratamientos con Seguimiento</span>
+                    {% if tratamientos.count > 0 %}
+                        <span class="badge bg-light text-dark">{{ tratamientos.count }} tratamiento(s)</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if tratamientos %}
+                        {% for tratamiento in tratamientos %}
+                            <div class="card mb-3 tratamiento-card {{ tratamiento.estado }}" onclick="window.location.href='{% url 'detalle_seguimiento' tratamiento.id %}'">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h5 class="mb-0">{{ tratamiento.paciente.usuario.nombres }} {{ tratamiento.paciente.usuario.apellidos }}</h5>
+                                        <span class="badge badge-{{ tratamiento.estado }}">{{ tratamiento.get_estado_display }}</span>
+                                    </div>
+                                    <p class="text-muted mb-2">
+                                        <strong>Diagnóstico:</strong> 
+                                        {{ tratamiento.diagnostico|truncatechars:100 }}
+                                    </p>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <small class="text-muted">Inicio: {{ tratamiento.fecha_inicio|date:"d/m/Y" }}</small>
+                                        <small class="text-muted">Fin estimado: {{ tratamiento.fecha_fin_estimada|date:"d/m/Y"|default:"No disponible" }}</small>
+                                    </div>
+                                    <div class="progress mb-2">
+                                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ tratamiento.progreso }}%;" aria-valuenow="{{ tratamiento.progreso }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <small>{{ tratamiento.sesiones_completadas }} de {{ tratamiento.cantidad_sesiones }} sesiones completadas</small>
+                                        <small>{{ tratamiento.progreso }}% completado</small>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-clipboard"></i>
+                            <h4>No hay tratamientos con seguimiento</h4>
+                            <p class="text-muted">No se encontraron tratamientos con los filtros seleccionados.</p>
+                            <a href="{% url 'programar_seguimientos' %}" class="btn btn-primary mt-3">
+                                <i class="fas fa-plus-circle me-2"></i> Crear Nuevo Tratamiento
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-info-circle me-2"></i> Información
+                </div>
+                <div class="card-body">
+                    <h5>Gestión de Seguimientos</h5>
+                    <p>Desde esta sección puede gestionar los tratamientos que requieren múltiples sesiones de seguimiento.</p>
+                    
+                    <h5>Acciones disponibles:</h5>
+                    <ul>
+                        <li>Ver detalles de cada tratamiento</li>
+                        <li>Registrar evolución de sesiones</li>
+                        <li>Programar citas para sesiones pendientes</li>
+                        <li>Cancelar tratamientos</li>
+                    </ul>
+                    
+                    <h5>Estados de tratamiento:</h5>
+                    <ul>
+                        <li><span class="badge badge-activo">Activo</span> - Tratamiento en curso</li>
+                        <li><span class="badge badge-terminado">Terminado</span> - Todas las sesiones completadas</li>
+                        <li><span class="badge badge-cancelado">Cancelado</span> - Tratamiento interrumpido</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header bg-warning text-white">
+                    <i class="fas fa-exclamation-triangle me-2"></i> Sesiones Pendientes
+                </div>
+                <div class="card-body">
+                    <div id="sesiones-pendientes-container">
+                        <p class="text-center"><i class="fas fa-spinner fa-spin"></i> Cargando sesiones pendientes...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Cargar sesiones pendientes
+        fetch('{% url "api_sesiones_pendientes" %}')
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('sesiones-pendientes-container');
+                container.innerHTML = '';
+                
+                if (data.sesiones && data.sesiones.length > 0) {
+                    const ul = document.createElement('ul');
+                    ul.className = 'list-group';
+                    
+                    data.sesiones.forEach(sesion => {
+                        const li = document.createElement('li');
+                        li.className = 'list-group-item';
+                        li.innerHTML = `
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>${sesion.paciente}</strong><br>
+                                    <small>Sesión ${sesion.numero_sesion} - ${sesion.fecha_programada}</small>
+                                </div>
+                                <a href="/seguimientos/programar-cita/${sesion.id}/" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-calendar-plus"></i>
+                                </a>
+                            </div>
+                        `;
+                        ul.appendChild(li);
+                    });
+                    
+                    container.appendChild(ul);
+                } else {
+                    container.innerHTML = '<p class="text-center">No hay sesiones pendientes de programación.</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Error al cargar sesiones pendientes:', error);
+                document.getElementById('sesiones-pendientes-container').innerHTML = 
+                    '<p class="text-center text-danger">Error al cargar sesiones pendientes.</p>';
+            });
+    });
+</script>
+{% endblock %}

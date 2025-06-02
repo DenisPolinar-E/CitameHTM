@@ -1,0 +1,461 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Mi Historial Médico - Hospital Tingo María{% endblock %}
+
+{% block page_title %}Mi Historial Médico{% endblock %}
+
+{% block extra_css %}
+<style>
+    .vital-card {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        height: 100%;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+    }
+    
+    .vital-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .vital-label {
+        display: block;
+        font-size: 14px;
+        color: #6c757d;
+        margin-bottom: 5px;
+    }
+    
+    .vital-value {
+        display: block;
+        font-size: 24px;
+        font-weight: bold;
+        color: #343a40;
+    }
+    
+    .imc-category {
+        display: block;
+        font-size: 14px;
+        margin-top: 5px;
+    }
+    
+    .antropometricos-table th {
+        background-color: #f0f7ff;
+    }
+    
+    .btn-registro {
+        transition: all 0.3s ease;
+    }
+    
+    .btn-registro:hover {
+        transform: scale(1.05);
+    }
+    
+    .datos-card {
+        transition: all 0.3s ease;
+        border-left: 4px solid #4e73df;
+    }
+    
+    .datos-card:hover {
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block sidebar_menu %}
+<a href="{% url 'dashboard_paciente' %}" class="menu-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="{% url 'mis_citas' %}" class="menu-item"><i class="fas fa-calendar-check"></i> Mis Citas</a>
+<a href="{% url 'reservar_cita' %}" class="menu-item"><i class="fas fa-calendar-plus"></i> Reservar Cita</a>
+<a href="{% url 'mi_historial_medico' %}" class="menu-item active"><i class="fas fa-file-medical-alt"></i> Mi Historial</a>
+<a href="{% url 'mis_tratamientos' %}" class="menu-item"><i class="fas fa-clipboard-list"></i> Mis Tratamientos</a>
+<a href="{% url 'perfil_paciente' %}" class="menu-item"><i class="fas fa-user"></i> Mi Perfil</a>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Datos Vitales -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-heartbeat me-2"></i> Datos Vitales</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="vital-card">
+                        <span class="vital-label">Edad</span>
+                        <span class="vital-value">
+                            {% if request.user.fecha_nacimiento %}
+                                {{ request.user.fecha_nacimiento|timesince|slice:"0:2" }} años
+                            {% else %}
+                                --
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="vital-card">
+                        <span class="vital-label">Peso</span>
+                        <span class="vital-value">
+                            {% if ultimo_registro.peso %}
+                                {{ ultimo_registro.peso }} kg
+                            {% else %}
+                                --
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="vital-card">
+                        <span class="vital-label">Talla</span>
+                        <span class="vital-value">
+                            {% if ultimo_registro.talla %}
+                                {{ ultimo_registro.talla }} cm
+                            {% else %}
+                                --
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="vital-card">
+                        <span class="vital-label">IMC</span>
+                        <span class="vital-value">
+                            {% if ultimo_registro.imc %}
+                                {{ ultimo_registro.imc }}
+                                <span class="imc-category">
+                                    ({{ ultimo_registro.get_categoria_imc }})
+                                </span>
+                            {% else %}
+                                --
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pestañas para diferentes secciones -->
+    <ul class="nav nav-tabs mb-4" id="historialTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="citas-tab" data-bs-toggle="tab" data-bs-target="#citas" type="button" role="tab" aria-controls="citas" aria-selected="true">
+                <i class="fas fa-calendar-check me-1"></i> Historial de Citas
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="antropometricos-tab" data-bs-toggle="tab" data-bs-target="#antropometricos" type="button" role="tab" aria-controls="antropometricos" aria-selected="false">
+                <i class="fas fa-weight me-1"></i> Datos Antropométricos
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="derivaciones-tab" data-bs-toggle="tab" data-bs-target="#derivaciones" type="button" role="tab" aria-controls="derivaciones" aria-selected="false">
+                <i class="fas fa-exchange-alt me-1"></i> Derivaciones
+            </button>
+        </li>
+    </ul>
+
+    <!-- Contenido de las pestañas -->
+    <div class="tab-content" id="historialTabsContent">
+        <!-- Historial de Citas -->
+        <div class="tab-pane fade show active" id="citas" role="tabpanel" aria-labelledby="citas-tab">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Historial de Atenciones Médicas</h5>
+                    
+                    <!-- Filtros -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-primary active" data-filter="all">Todas</button>
+                                <button type="button" class="btn btn-outline-primary" data-filter="atendidas">Atendidas</button>
+                                <button type="button" class="btn btn-outline-primary" data-filter="pendientes">Pendientes</button>
+                                <button type="button" class="btn btn-outline-primary" data-filter="canceladas">Canceladas</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tabla de citas -->
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Médico</th>
+                                    <th>Especialidad</th>
+                                    <th>Motivo</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cita in citas_atendidas %}
+                                <tr class="cita-row" data-type="atendidas">
+                                    <td>{{ cita.fecha|date:"d/m/Y" }} {{ cita.hora_inicio|time:"H:i" }}</td>
+                                    <td>Dr. {{ cita.medico.usuario.nombres }} {{ cita.medico.usuario.apellidos }}</td>
+                                    <td>{{ cita.medico.especialidad.nombre }}</td>
+                                    <td>{{ cita.motivo|truncatechars:50 }}</td>
+                                    <td><span class="badge bg-success">Atendida</span></td>
+                                </tr>
+                                {% endfor %}
+                                
+                                {% for cita in citas_pendientes %}
+                                <tr class="cita-row" data-type="pendientes">
+                                    <td>{{ cita.fecha|date:"d/m/Y" }} {{ cita.hora_inicio|time:"H:i" }}</td>
+                                    <td>Dr. {{ cita.medico.usuario.nombres }} {{ cita.medico.usuario.apellidos }}</td>
+                                    <td>{{ cita.medico.especialidad.nombre }}</td>
+                                    <td>{{ cita.motivo|truncatechars:50 }}</td>
+                                    <td>
+                                        {% if cita.estado == 'pendiente' %}
+                                        <span class="badge bg-warning text-dark">Pendiente</span>
+                                        {% else %}
+                                        <span class="badge bg-info">Confirmada</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                
+                                {% for cita in citas_canceladas %}
+                                <tr class="cita-row" data-type="canceladas">
+                                    <td>{{ cita.fecha|date:"d/m/Y" }} {{ cita.hora_inicio|time:"H:i" }}</td>
+                                    <td>Dr. {{ cita.medico.usuario.nombres }} {{ cita.medico.usuario.apellidos }}</td>
+                                    <td>{{ cita.medico.especialidad.nombre }}</td>
+                                    <td>{{ cita.motivo|truncatechars:50 }}</td>
+                                    <td><span class="badge bg-danger">Cancelada</span></td>
+                                </tr>
+                                {% endfor %}
+                                
+                                {% if not citas_atendidas and not citas_pendientes and not citas_canceladas %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-3">
+                                        <p class="text-muted mb-0">No tienes citas registradas en el sistema.</p>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Datos Antropométricos -->
+        <div class="tab-pane fade" id="antropometricos" role="tabpanel" aria-labelledby="antropometricos-tab">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Historial de Mediciones</h5>
+                    
+                    {% if datos_antropometricos %}
+                    <!-- Gráfico de evolución -->
+                    <div class="mb-4">
+                        <h5 class="mb-3">Evolución del Peso e IMC</h5>
+                        <canvas id="chartAntropometricos" width="400" height="200"></canvas>
+                        <script type="application/json" id="datos-antropometricos-json">
+                            {
+                                "fechas": [{% for dato in datos_antropometricos %}"{{ dato.fecha_registro|date:'d/m/Y' }}"{% if not forloop.last %},{% endif %}{% endfor %}],
+                                "pesos": [{% for dato in datos_antropometricos %}{{ dato.peso }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                                "imcs": [{% for dato in datos_antropometricos %}{{ dato.imc }}{% if not forloop.last %},{% endif %}{% endfor %}]
+                            }
+                        </script>
+                    </div>
+                    
+                    <!-- Tabla de mediciones -->
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Peso (kg)</th>
+                                    <th>Talla (cm)</th>
+                                    <th>IMC</th>
+                                    <th>Categoría</th>
+                                    <th>Registrado por</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for dato in datos_antropometricos %}
+                                <tr>
+                                    <td>{{ dato.fecha_registro|date:"d/m/Y" }}</td>
+                                    <td>{{ dato.peso }}</td>
+                                    <td>{{ dato.talla }}</td>
+                                    <td>{{ dato.imc }}</td>
+                                    <td>{{ dato.get_categoria_imc }}</td>
+                                    <td>
+                                        {% if dato.registrado_por %}
+                                            {% if dato.registrado_por.rol.nombre == 'Medico' %}
+                                                Dr. {{ dato.registrado_por.nombres }} {{ dato.registrado_por.apellidos }}
+                                            {% else %}
+                                                {{ dato.registrado_por.nombres }} {{ dato.registrado_por.apellidos }}
+                                            {% endif %}
+                                        {% else %}
+                                            Sistema
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i> No hay registros de datos antropométricos disponibles.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Derivaciones -->
+        <div class="tab-pane fade" id="derivaciones" role="tabpanel" aria-labelledby="derivaciones-tab">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Historial de Derivaciones</h5>
+                    
+                    {% if derivaciones %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Médico Origen</th>
+                                    <th>Especialidad Destino</th>
+                                    <th>Motivo</th>
+                                    <th>Estado</th>
+                                    <th>Vigencia</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for derivacion in derivaciones %}
+                                <tr>
+                                    <td>{{ derivacion.fecha_derivacion|date:"d/m/Y" }}</td>
+                                    <td>Dr. {{ derivacion.medico_origen.usuario.nombres }} {{ derivacion.medico_origen.usuario.apellidos }}</td>
+                                    <td>{{ derivacion.especialidad_destino.nombre }}</td>
+                                    <td>{{ derivacion.motivo|truncatechars:50 }}</td>
+                                    <td>
+                                        {% if derivacion.estado == 'pendiente' %}
+                                            <span class="badge bg-warning text-dark">Pendiente</span>
+                                        {% elif derivacion.estado == 'completada' %}
+                                            <span class="badge bg-success">Completada</span>
+                                        {% elif derivacion.estado == 'vencida' %}
+                                            <span class="badge bg-danger">Vencida</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ derivacion.estado }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if derivacion.esta_vigente %}
+                                            <span class="text-success">Vigente</span>
+                                        {% else %}
+                                            <span class="text-danger">Vencida</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i> No tienes derivaciones registradas en el sistema.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Filtros para citas
+        const filterButtons = document.querySelectorAll('[data-filter]');
+        const citaRows = document.querySelectorAll('.cita-row');
+        
+        if (filterButtons.length > 0) {
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Quitar clase activa de todos los botones
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    // Agregar clase activa al botón clickeado
+                    this.classList.add('active');
+                    
+                    const filter = this.getAttribute('data-filter');
+                    
+                    // Mostrar/ocultar filas según filtro
+                    citaRows.forEach(row => {
+                        if (filter === 'all' || row.getAttribute('data-type') === filter) {
+                            row.style.display = '';
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+                });
+            });
+        }
+        
+        // Inicializar gráfico si existe el canvas y hay datos
+        const chartCanvas = document.getElementById('chartAntropometricos');
+        if (chartCanvas) {
+            // Obtener datos del elemento data-* en el canvas
+            const datosAntropometricos = document.getElementById('datos-antropometricos-json');
+            if (datosAntropometricos) {
+                try {
+                    const datos = JSON.parse(datosAntropometricos.textContent);
+                    const ctx = chartCanvas.getContext('2d');
+                    
+                    if (datos.fechas && datos.fechas.length > 0) {
+                        new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: datos.fechas,
+                                datasets: [
+                                    {
+                                        label: 'Peso (kg)',
+                                        data: datos.pesos,
+                                        borderColor: 'rgba(54, 162, 235, 1)',
+                                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                        borderWidth: 2,
+                                        fill: false,
+                                        tension: 0.1
+                                    },
+                                    {
+                                        label: 'IMC',
+                                        data: datos.imcs,
+                                        borderColor: 'rgba(255, 99, 132, 1)',
+                                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                                        borderWidth: 2,
+                                        fill: false,
+                                        tension: 0.1
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                scales: {
+                                    y: {
+                                        beginAtZero: false
+                                    }
+                                },
+                                plugins: {
+                                    tooltip: {
+                                        mode: 'index',
+                                        intersect: false
+                                    }
+                                }
+                            }
+                        });
+                    }
+                } catch (e) {
+                    console.error('Error al parsear datos antropométricos:', e);
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
+
+

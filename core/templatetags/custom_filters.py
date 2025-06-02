@@ -19,6 +19,13 @@ def multiply(value, arg):
         return 0
 
 @register.filter
+def get_item(dictionary, key):
+    """Obtiene un elemento de un diccionario por su clave"""
+    if dictionary is None:
+        return None
+    return dictionary.get(key)
+
+@register.filter
 def subtract(value, arg):
     """Resta el argumento del valor"""
     try:

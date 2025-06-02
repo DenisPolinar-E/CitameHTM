@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.core.exceptions import ValidationError
 from datetime import datetime, time
-from .models import Usuario, Paciente, Medico, Cita, Derivacion, HistorialMedico, TratamientoProgramado, DisponibilidadMedica, DIAS_SEMANA_CHOICES, TIPO_TURNO_CHOICES
+from .models import Usuario, Paciente, Medico, Cita, Derivacion, HistorialMedico, TratamientoProgramado, DisponibilidadMedica, DatosAntropometricos, DIAS_SEMANA_CHOICES, TIPO_TURNO_CHOICES
 
 class RegistroPacienteForm(forms.ModelForm):
     """Formulario para el registro de usuarios con diferentes roles"""
@@ -107,6 +107,22 @@ class TratamientoProgramadoForm(forms.ModelForm):
             'fecha_inicio': forms.DateInput(attrs={'type': 'date'}),
             'diagnostico': forms.Textarea(attrs={'rows': 4}),
         }
+
+
+class DatosAntropometricosForm(forms.ModelForm):
+    """Formulario para registrar datos antropométricos del paciente"""
+    class Meta:
+        model = DatosAntropometricos
+        fields = ['peso', 'talla']
+        widgets = {
+            'peso': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'placeholder': 'Peso en kg'}),
+            'talla': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'min': '0', 'placeholder': 'Talla en cm'}),
+        }
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['peso'].help_text = 'Ingrese el peso en kilogramos (ej. 70.5)'
+        self.fields['talla'].help_text = 'Ingrese la talla en centímetros (ej. 175.0)'
 
 class JustificarInasistenciaForm(forms.ModelForm):
     """Formulario para justificar inasistencias"""

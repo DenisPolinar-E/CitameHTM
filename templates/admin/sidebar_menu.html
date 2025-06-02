@@ -1,0 +1,9 @@
+<!-- Menú lateral para el administrador -->
+<a href="{% url 'dashboard_admin' %}" class="menu-item {% if request.path == '/dashboard/admin/' %}active{% endif %}"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="{% url 'admin_historial_medico' %}" class="menu-item {% if request.path == '/admin/historial-medico/' %}active{% endif %}"><i class="fas fa-file-medical-alt"></i> Historial Médico</a>
+<a href="#" class="menu-item"><i class="fas fa-chart-bar"></i> Estadísticas Generales</a>
+<a href="#" class="menu-item"><i class="fas fa-calendar-alt"></i> Citas por Especialidad</a>
+<a href="#" class="menu-item"><i class="fas fa-user-times"></i> Control de Inasistencias</a>
+<a href="#" class="menu-item"><i class="fas fa-users"></i> Usuarios del Sistema</a>
+<a href="{% url 'perfil_admin' %}" class="menu-item {% if request.path == '/perfil/admin/' %}active{% endif %}"><i class="fas fa-user"></i> Mi Perfil</a>
+<a href="#" class="menu-item"><i class="fas fa-bell"></i> Notificaciones</a>

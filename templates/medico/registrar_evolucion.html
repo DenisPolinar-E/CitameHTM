@@ -1,0 +1,161 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Registrar Evolución - Médico{% endblock %}
+
+{% block page_title %}Registrar Evolución de Sesión{% endblock %}
+
+{% block sidebar_menu %}
+<a href="{% url 'dashboard_medico' %}" class="menu-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="{% url 'agenda_medico' %}" class="menu-item"><i class="fas fa-calendar-alt"></i> Mi Agenda</a>
+<a href="{% url 'gestion_citas' %}" class="menu-item"><i class="fas fa-calendar-check"></i> Gestión de Citas</a>
+<a href="{% url 'historial_medico' %}" class="menu-item"><i class="fas fa-file-medical-alt"></i> Historial Médico</a>
+<a href="{% url 'ver_seguimientos' %}" class="menu-item active"><i class="fas fa-clipboard-list"></i> Seguimientos</a>
+<a href="{% url 'programar_seguimientos' %}" class="menu-item"><i class="fas fa-calendar-plus"></i> Programar Seguimiento</a>
+<a href="{% url 'perfil_medico' %}" class="menu-item"><i class="fas fa-user-md"></i> Mi Perfil</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .card-header {
+        border-radius: 10px 10px 0 0 !important;
+        font-weight: 600;
+    }
+    .session-info {
+        background-color: #f5f5f5;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .session-number {
+        font-weight: 600;
+        color: #1976d2;
+    }
+    .progress {
+        height: 10px;
+        border-radius: 5px;
+    }
+    .form-label {
+        font-weight: 500;
+    }
+    .previous-evolution {
+        background-color: #e3f2fd;
+        border-left: 4px solid #1976d2;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'ver_seguimientos' %}">Seguimientos</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'detalle_seguimiento' sesion.tratamiento.id %}">Detalle de Tratamiento</a></li>
+                    <li class="breadcrumb-item active">Registrar Evolución</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-clipboard me-2"></i> Registrar Evolución de Sesión
+                </div>
+                <div class="card-body">
+                    <div class="session-info mb-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>Información de la Sesión</h5>
+                                <p><strong>Paciente:</strong> {{ sesion.tratamiento.paciente.usuario.nombres }} {{ sesion.tratamiento.paciente.usuario.apellidos }}</p>
+                                <p><strong>Fecha de cita:</strong> {{ sesion.cita.fecha|date:"d/m/Y" }} {{ sesion.cita.hora_inicio|time:"H:i" }}</p>
+                                <p><strong class="session-number">Sesión {{ sesion.numero_sesion }} de {{ sesion.tratamiento.cantidad_sesiones }}</strong></p>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Detalles del Tratamiento</h5>
+                                <p><strong>Diagnóstico:</strong> {{ sesion.tratamiento.diagnostico|truncatechars:100 }}</p>
+                                <p><strong>Progreso:</strong></p>
+                                <div class="progress mb-2">
+                                    <div class="progress-bar bg-primary" role="progressbar" style="width: {{ sesion.tratamiento.progreso }}%;" aria-valuenow="{{ sesion.tratamiento.progreso }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <small>{{ sesion.tratamiento.sesiones_completadas }} de {{ sesion.tratamiento.cantidad_sesiones }} sesiones completadas</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if sesion.numero_sesion > 1 %}
+                        {% for s in sesion.tratamiento.sesiones.all %}
+                            {% if s.numero_sesion == sesion.numero_sesion|add:"-1" and s.estado == 'completada' %}
+                                <div class="previous-evolution mb-4">
+                                    <h5><i class="fas fa-history me-2"></i> Evolución anterior (Sesión {{ s.numero_sesion }})</h5>
+                                    <p>{{ s.evolucion|linebreaks }}</p>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label for="evolucion" class="form-label">Evolución del paciente</label>
+                            <textarea id="evolucion" name="evolucion" class="form-control" rows="5" required placeholder="Describa la evolución del paciente en esta sesión..."></textarea>
+                            <div class="form-text">Registre los cambios observados, respuesta al tratamiento y cualquier hallazgo relevante.</div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="observaciones" class="form-label">Observaciones adicionales</label>
+                            <textarea id="observaciones" name="observaciones" class="form-control" rows="3" placeholder="Observaciones adicionales (opcional)..."></textarea>
+                            <div class="form-text">Registre cualquier observación adicional relevante para el seguimiento.</div>
+                        </div>
+                        
+                        <div class="mt-4 d-flex justify-content-between">
+                            <a href="{% url 'detalle_seguimiento' sesion.tratamiento.id %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i> Guardar Evolución
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-info-circle me-2"></i> Información
+                </div>
+                <div class="card-body">
+                    <h5>Registro de Evolución</h5>
+                    <p>Está registrando la evolución del paciente para la sesión {{ sesion.numero_sesion }} del tratamiento.</p>
+                    
+                    <h5 class="mt-3">Recomendaciones:</h5>
+                    <ul>
+                        <li>Sea específico sobre los cambios observados desde la última sesión</li>
+                        <li>Documente la respuesta al tratamiento</li>
+                        <li>Registre cualquier efecto adverso o complicación</li>
+                        <li>Incluya mediciones objetivas cuando sea posible</li>
+                    </ul>
+                    
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Importante:</strong> Al guardar esta evolución, la sesión se marcará como completada y actualizará el progreso general del tratamiento.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

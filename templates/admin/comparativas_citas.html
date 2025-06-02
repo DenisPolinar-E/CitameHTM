@@ -1,0 +1,1286 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Comparativas de Citas - Hospital Tingo María{% endblock %}
+
+{% block content_header %}
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">{{ titulo }}</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard_admin' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item">Análisis Temporal</li>
+                    <li class="breadcrumb-item active">{{ titulo }}</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Tarjeta de filtros -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Filtros de Comparación</h3>
+        </div>
+        <div class="card-body">
+            <form id="filtros-form">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5 class="border-bottom pb-2 mb-3">Período 1</h5>
+                        <div class="row">
+                            <!-- Filtro de período 1 -->
+                            <div class="col-md-4 mb-3">
+                                <label for="periodo1">Tipo de Período</label>
+                                <select class="form-control" id="periodo1" name="periodo1">
+                                    <option value="diario">Diario</option>
+                                    <option value="semanal">Semanal</option>
+                                    <option value="mensual" selected>Mensual</option>
+                                    <option value="trimestral">Trimestral</option>
+                                    <option value="anual">Anual</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Filtro de fechas período 1 -->
+                            <div class="col-md-4 mb-3">
+                                <label for="fecha_inicio1">Fecha Inicio</label>
+                                <input type="date" class="form-control" id="fecha_inicio1" name="fecha_inicio1" value="{{ fecha_inicio|date:'Y-m-d' }}">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="fecha_fin1">Fecha Fin</label>
+                                <input type="date" class="form-control" id="fecha_fin1" name="fecha_fin1" value="{{ fecha_fin|date:'Y-m-d' }}">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h5 class="border-bottom pb-2 mb-3">Período 2</h5>
+                        <div class="row">
+                            <!-- Filtro de período 2 -->
+                            <div class="col-md-4 mb-3">
+                                <label for="periodo2">Tipo de Período</label>
+                                <select class="form-control" id="periodo2" name="periodo2">
+                                    <option value="diario">Diario</option>
+                                    <option value="semanal">Semanal</option>
+                                    <option value="mensual" selected>Mensual</option>
+                                    <option value="trimestral">Trimestral</option>
+                                    <option value="anual">Anual</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Filtro de fechas período 2 -->
+                            <div class="col-md-4 mb-3">
+                                <label for="fecha_inicio2">Fecha Inicio</label>
+                                <input type="date" class="form-control" id="fecha_inicio2" name="fecha_inicio2">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="fecha_fin2">Fecha Fin</label>
+                                <input type="date" class="form-control" id="fecha_fin2" name="fecha_fin2">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <!-- Filtros comunes -->
+                    <div class="col-md-4 mb-3">
+                        <label for="especialidad">Especialidad</label>
+                        <select class="form-control" id="especialidad" name="especialidad">
+                            <option value="">Todas</option>
+                            {% for especialidad in especialidades %}
+                            <option value="{{ especialidad.id }}">{{ especialidad.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <label for="medico">Médico</label>
+                        <select class="form-control" id="medico" name="medico" disabled>
+                            <option value="">Todos</option>
+                            <!-- Se cargará dinámicamente con AJAX -->
+                        </select>
+                    </div>
+                    
+                    <!-- Botón de aplicar filtros -->
+                    <div class="col-md-4 mb-3 d-flex align-items-end">
+                        <button type="button" id="aplicar-filtros" class="btn btn-primary">
+                            <i class="fas fa-sync"></i> Comparar Períodos
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Tarjeta de resultados -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3 class="card-title">Resultados Comparativos</h3>
+            <div class="card-tools">
+                <button type="button" id="exportar-pdf" class="btn btn-sm btn-outline-danger mr-2">
+                    <i class="fas fa-file-pdf"></i> Exportar PDF
+                </button>
+                <button type="button" id="exportar-excel" class="btn btn-sm btn-outline-success">
+                    <i class="fas fa-file-excel"></i> Exportar Excel
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Contenedor de carga -->
+            <div id="loading-container" style="display: none;">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Cargando...</span>
+                    </div>
+                    <p class="mt-2">Cargando datos comparativos...</p>
+                </div>
+            </div>
+            
+            <!-- Contenedor de resultados -->
+            <div id="resultados-container" style="display: none;">
+                <!-- Etiquetas de períodos -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="alert alert-info">
+                            <strong>Período 1:</strong> <span id="etiqueta-periodo1">-</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="alert alert-warning">
+                            <strong>Período 2:</strong> <span id="etiqueta-periodo2">-</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gráfico de barras comparativo -->
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="card-title">Comparativa de Citas por Estado</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="grafico-comparativo" height="300"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tabla comparativa -->
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title">Tabla Comparativa de Métricas</h5>
+                            </div>
+                            <div class="card-body table-responsive p-0">
+                                <table class="table table-hover table-bordered">
+                                    <thead>
+                                        <tr class="bg-light">
+                                            <th style="width: 30%">Métrica</th>
+                                            <th style="width: 20%">Período 1</th>
+                                            <th style="width: 20%">Período 2</th>
+                                            <th style="width: 15%">Variación</th>
+                                            <th style="width: 15%">% Cambio</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabla-comparativa">
+                                        <!-- Se llenará dinámicamente con JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Comparativas por dimensiones adicionales -->
+            <div class="row mt-4" id="dimensiones-adicionales-container" style="display: none;">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title">Comparativas por Dimensiones Adicionales</h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Pestañas para las diferentes dimensiones -->
+                            <ul class="nav nav-tabs" id="dimensiones-tabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <a class="nav-link active" id="especialidad-tab" data-bs-toggle="tab" data-toggle="tab" href="#especialidad-content" role="tab" aria-controls="especialidad-content" aria-selected="true">
+                                        <i class="fas fa-user-md mr-1"></i> Por Especialidad
+                                    </a>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <a class="nav-link" id="dia-tab" data-bs-toggle="tab" data-toggle="tab" href="#dia-content" role="tab" aria-controls="dia-content" aria-selected="false">
+                                        <i class="fas fa-calendar-day mr-1"></i> Por Día de la Semana
+                                    </a>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <a class="nav-link" id="horario-tab" data-bs-toggle="tab" data-toggle="tab" href="#horario-content" role="tab" aria-controls="horario-content" aria-selected="false">
+                                        <i class="far fa-clock mr-1"></i> Por Horario
+                                    </a>
+                                </li>
+                            </ul>
+                            
+                            <!-- Contenido de las pestañas -->
+                            <div class="tab-content mt-3" id="dimensiones-tabs-content">
+                                <!-- Contenido de Especialidad -->
+                                <div class="tab-pane fade show active" id="especialidad-content" role="tabpanel" aria-labelledby="especialidad-tab">
+                                    <div class="row">
+                                        <div class="col-md-12 mb-3">
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle mr-1"></i> Comparativa de asistencia entre diferentes especialidades médicas.
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="chart-container" id="grafico-especialidades-container">
+                                                <canvas id="grafico-especialidades" height="300"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Contenido de Día de la Semana -->
+                                <div class="tab-pane fade" id="dia-content" role="tabpanel" aria-labelledby="dia-tab">
+                                    <div class="row">
+                                        <div class="col-md-12 mb-3">
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle mr-1"></i> Comparativa de citas por estado según el día de la semana.
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div id="grafico-dias-container" class="chart-container">
+                                                <canvas id="grafico-dias" height="300"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Contenido de Horario -->
+                                <div class="tab-pane fade" id="horario-content" role="tabpanel" aria-labelledby="horario-tab">
+                                    <div class="row">
+                                        <div class="col-md-12 mb-3">
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle mr-1"></i> Comparativa de citas por estado según el horario (mañana vs tarde).
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div id="grafico-horarios-container" class="chart-container">
+                                                <canvas id="grafico-horarios" height="300"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Mensaje de sin datos -->
+            <div id="sin-datos-container" class="text-center py-5" style="display: none;">
+                <i class="fas fa-chart-bar fa-4x text-muted mb-3"></i>
+                <h4 class="text-muted">No hay datos para mostrar</h4>
+                <p class="text-muted">Selecciona períodos de tiempo válidos y aplica los filtros para ver resultados comparativos.</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+
+
+
+<!-- Chart.js para gráficos -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<!-- html2pdf.js para exportar a PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<!-- SheetJS para exportar a Excel -->
+<script src="https://cdn.sheetjs.com/xlsx-0.19.2/package/dist/xlsx.full.min.js"></script>
+
+<script>
+    // Variables globales
+    let graficoComparativo;
+    let datosComparativos = null;
+    
+    // Inicializar componentes al cargar el documento
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar fechas con valores predeterminados
+        inicializarFechasPeriodos();
+        
+        // Configurar eventos para carga de médicos por especialidad
+        document.getElementById('especialidad').addEventListener('change', cargarMedicosPorEspecialidad);
+        
+        // Configurar evento para botón de aplicar filtros
+        document.getElementById('aplicar-filtros').addEventListener('click', aplicarFiltros);
+        
+        // Configurar eventos para botones de exportación
+        document.getElementById('exportar-pdf').addEventListener('click', exportarPDF);
+        document.getElementById('exportar-excel').addEventListener('click', exportarExcel);
+    });
+    
+    // Función para inicializar fechas de los períodos
+    function inicializarFechasPeriodos() {
+        // Obtener fecha actual
+        const hoy = new Date();
+        
+        // Para el segundo período, configurar el mes anterior por defecto
+        const mesAnterior = new Date(hoy);
+        mesAnterior.setMonth(hoy.getMonth() - 1);
+        
+        // Configurar fecha de inicio y fin para el período 2 (mes anterior)
+        const inicioMesAnterior = new Date(mesAnterior.getFullYear(), mesAnterior.getMonth(), 1);
+        const finMesAnterior = new Date(mesAnterior.getFullYear(), mesAnterior.getMonth() + 1, 0);
+        
+        // Formatear fechas para inputs date
+        document.getElementById('fecha_inicio2').value = formatearFecha(inicioMesAnterior);
+        document.getElementById('fecha_fin2').value = formatearFecha(finMesAnterior);
+    }
+    
+    // Función para formatear fecha a YYYY-MM-DD
+    function formatearFecha(fecha) {
+        const year = fecha.getFullYear();
+        const month = String(fecha.getMonth() + 1).padStart(2, '0');
+        const day = String(fecha.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+    
+    // Función para cargar médicos según la especialidad seleccionada
+    function cargarMedicosPorEspecialidad() {
+        const especialidadId = document.getElementById('especialidad').value;
+        const medicoSelect = document.getElementById('medico');
+        
+        // Limpiar y deshabilitar selector de médicos
+        medicoSelect.innerHTML = '<option value="">Todos</option>';
+        medicoSelect.disabled = true;
+        
+        // Si no hay especialidad seleccionada, salir
+        if (!especialidadId) {
+            return;
+        }
+        
+        // Obtener médicos por especialidad
+        fetch(`/api/medicos-por-especialidad/?especialidad_id=${especialidadId}`)
+            .then(response => response.json())
+            .then(data => {
+                // Mostrar la respuesta completa para depuración
+                console.log('Respuesta completa de la API:', data);
+                
+                // Limpiar selector de médicos
+                medicoSelect.innerHTML = '<option value="">Todos</option>';
+                
+                // Obtener el array de médicos directamente desde data.medicos
+                // Este es el formato que devuelve api_medicos_por_especialidad
+                let medicos = [];
+                if (data && data.medicos && Array.isArray(data.medicos)) {
+                    medicos = data.medicos;
+                    console.log('Se encontraron', medicos.length, 'médicos');
+                } else {
+                    console.warn('Formato inesperado de datos:', data);
+                }
+                
+                // Agregar médicos al selector
+                if (medicos.length > 0) {
+                    medicos.forEach(medico => {
+                        // Crear y configurar la opción
+                        const option = document.createElement('option');
+                        option.value = medico.id;
+                        
+                        // Determinar el nombre del médico (las diferentes APIs usan distintas propiedades)
+                        let nombreMedico = '';
+                        
+                        if (medico.nombre_completo) {
+                            nombreMedico = medico.nombre_completo; // Formato de views.py
+                            console.log('Usando nombre_completo:', nombreMedico);
+                        } else if (medico.nombre) {
+                            nombreMedico = medico.nombre;  // Formato de views_reportes.py
+                            console.log('Usando nombre:', nombreMedico);
+                        } else {
+                            nombreMedico = `Médico ID: ${medico.id}`;
+                            console.log('No se encontró nombre, usando ID');
+                        }
+                        
+                        option.textContent = nombreMedico;
+                        console.log('Agregando médico al selector:', nombreMedico, '(ID:', medico.id, ')');
+                        
+                        medicoSelect.appendChild(option);
+                    });
+                } else {
+                    console.warn('No se encontraron médicos para esta especialidad');
+                }
+                
+                // Habilitar selector de médicos
+                medicoSelect.disabled = false;
+            })
+            .catch(error => {
+                console.error('Error al cargar médicos:', error);
+                medicoSelect.innerHTML = '<option value="">Error al cargar médicos</option>';
+                medicoSelect.disabled = true;
+            });
+    }
+    
+    // Función para aplicar filtros y obtener datos comparativos
+    function aplicarFiltros() {
+        console.log('Aplicando filtros...');
+        
+        // Recopilar parámetros de filtros
+        const filtros = {
+            periodo1: document.getElementById('periodo1').value,
+            fecha_inicio1: document.getElementById('fecha_inicio1').value,
+            fecha_fin1: document.getElementById('fecha_fin1').value,
+            periodo2: document.getElementById('periodo2').value,
+            fecha_inicio2: document.getElementById('fecha_inicio2').value,
+            fecha_fin2: document.getElementById('fecha_fin2').value,
+            especialidad: document.getElementById('especialidad').value, // Cambiado de especialidad_id a especialidad
+            medico: document.getElementById('medico').value // Cambiado de medico_id a medico
+        };
+        
+        // Validar fechas antes de hacer la petición
+        if (!validarFechas(filtros)) {
+            return;
+        }
+        
+        // Mostrar indicador de carga
+        document.getElementById('loading-container').style.display = 'block';
+        document.getElementById('resultados-container').style.display = 'none';
+        document.getElementById('sin-datos-container').style.display = 'none';
+        document.getElementById('dimensiones-adicionales-container').style.display = 'none';
+        
+        console.log('Filtros aplicados:', filtros);
+        
+        // Crear parámetros para la URL
+        const params = new URLSearchParams();
+        
+        Object.keys(filtros).forEach(key => {
+            if (filtros[key]) params.append(key, filtros[key]);
+        });
+        
+        // Añadir parámetro para solicitar dimensiones adicionales
+        params.append('incluir_dimensiones', 'true');
+        
+        // Realizar petición AJAX para obtener datos comparativos
+        fetch(`/api/comparativa-citas/?${params.toString()}`)
+            .then(response => {
+                console.log('Estado de la respuesta API:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                // Guardar datos para uso posterior
+                datosComparativos = data;
+                
+                // Agregar depuración para ver la estructura exacta de la respuesta
+                console.log('Respuesta completa de API comparativa:', data);
+                
+                // Verificar si hay errores en la respuesta
+                if (data.error || data.status === 'error') {
+                    console.error('Error en la respuesta API:', data.error || 'Error desconocido');
+                    mostrarMensajeError(data.error || 'Error al procesar los datos comparativos');
+                    return;
+                }
+                
+                // Depurar la estructura completa para identificar el problema
+                console.log('Estructura de la respuesta:', JSON.stringify(data, null, 2));
+                
+                // Verificar si hay alguna referencia a inasistencias que está causando problemas
+                try {
+                    // Buscar referencias a inasistencias en los datos o en variaciones
+                    const buscarInasistencias = (obj) => {
+                        if (!obj || typeof obj !== 'object') return false;
+                        
+                        for (const key in obj) {
+                            if (key === 'inasistencias') {
+                                console.error('Encontrada referencia a inasistencias en:', obj);
+                                delete obj[key]; // Eliminar la referencia problemática
+                                return true;
+                            }
+                            if (typeof obj[key] === 'object' && buscarInasistencias(obj[key])) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    };
+                    
+                    // Buscar y eliminar referencias problemáticas
+                    if (buscarInasistencias(data)) {
+                        console.warn('Se encontraron y eliminaron referencias a inasistencias');
+                    }
+                } catch (e) {
+                    console.error('Error al analizar la respuesta:', e);
+                }
+                
+                // Verificar si existe la estructura esperada
+                if (!data || !data.periodo1 || !data.periodo2) {
+                    console.error('Estructura de datos inválida en la respuesta');
+                    mostrarMensajeError('La estructura de datos recibida es inválida');
+                    return;
+                }
+                
+                // Verificar si existen datos en los períodos
+                if (!data.periodo1.datos || !data.periodo2.datos) {
+                    console.error('No se encontraron datos en la respuesta');
+                    document.getElementById('loading-container').style.display = 'none';
+                    document.getElementById('sin-datos-container').style.display = 'block';
+                    return;
+                }
+                
+                // Verificar si hay citas en alguno de los períodos
+                if (data.periodo1.datos.total === 0 && data.periodo2.datos.total === 0) {
+                    console.log('No hay citas en ninguno de los períodos');
+                    document.getElementById('loading-container').style.display = 'none';
+                    document.getElementById('sin-datos-container').style.display = 'block';
+                    return;
+                }
+                
+                // Actualizar etiquetas de períodos
+                document.getElementById('etiqueta-periodo1').textContent = 
+                    `${data.periodo1.etiqueta || 'Período 1'} (${formatearFechaPeriodo(filtros.fecha_inicio1)} - ${formatearFechaPeriodo(filtros.fecha_fin1)})`;
+                document.getElementById('etiqueta-periodo2').textContent = 
+                    `${data.periodo2.etiqueta || 'Período 2'} (${formatearFechaPeriodo(filtros.fecha_inicio2)} - ${formatearFechaPeriodo(filtros.fecha_fin2)})`;
+                
+                // Actualizar gráfico comparativo
+                actualizarGraficoComparativo(data);
+                actualizarTablaComparativa(data);
+                
+                // Verificar si hay datos de dimensiones adicionales
+                if (data.dimensiones_adicionales) {
+                    console.log('Datos de dimensiones adicionales recibidos:', data.dimensiones_adicionales);
+                    
+                    // Almacenar los datos para los gráficos en una variable global
+                    window.datosComparativos = data;
+                    
+                    // Mostrar el contenedor de dimensiones adicionales
+                    document.getElementById('dimensiones-adicionales-container').style.display = 'block';
+                    
+                    // Mostrar el contenedor de dimensiones adicionales
+                    document.getElementById('dimensiones-adicionales-container').style.display = 'block';
+                    
+                    // Sólo inicializamos el gráfico de especialidades, que ya sabemos que funciona
+                    if (data.dimensiones_adicionales.especialidades) {
+                        setTimeout(() => {
+                            actualizarGraficoEspecialidades(data.dimensiones_adicionales.especialidades);
+                        }, 100);
+                    }
+                    
+                    // IMPORTANTE: No inicializamos aquí los gráficos de días y horarios
+                    // para evitar conflictos. En su lugar, configuramos eventos de pestaña
+                    
+                    // Almacenamos los datos en una variable global para poder acceder desde cualquier lugar
+                    window.datosComparativaActual = data;
+                    
+                    // Implementación de cambio de pestañas manualmente
+                    $('#dimensiones-tabs a').off('click');
+                    $('#dimensiones-tabs a').on('click', function(e) {
+                        e.preventDefault();
+                        
+                        // Activar visualmente la pestaña seleccionada
+                        $('#dimensiones-tabs a').removeClass('active');
+                        $(this).addClass('active');
+                        
+                        // Ocultar todos los contenidos de pestañas
+                        $('.tab-pane').removeClass('show active');
+                        
+                        // Mostrar el contenido correspondiente
+                        var targetId = $(this).attr('href');
+                        $(targetId).addClass('show active');
+                        
+                        var tabId = $(this).attr('id');
+                        console.log('Pestaña cambiada manualmente a:', tabId, 'contenido:', targetId);
+                        
+                        if (!window.datosComparativaActual || !window.datosComparativaActual.dimensiones_adicionales) {
+                            console.error('No hay datos disponibles para gráficos');
+                            return;
+                        }
+                        
+                        // Actualizamos el gráfico correspondiente con un tiempo de espera
+                        setTimeout(() => {
+                            try {
+                                if (tabId === 'dia-tab') {
+                                    console.log('Iniciando actualización del gráfico de días');
+                                    actualizarGraficoDias(window.datosComparativaActual);
+                                } else if (tabId === 'horario-tab') {
+                                    console.log('Iniciando actualización del gráfico de horarios');
+                                    actualizarGraficoHorarios(window.datosComparativaActual);
+                                } else if (tabId === 'especialidad-tab') {
+                                    console.log('Iniciando actualización del gráfico de especialidades');
+                                    actualizarGraficoEspecialidades(window.datosComparativaActual.dimensiones_adicionales.especialidades);
+                                }
+                            } catch (error) {
+                                console.error('Error al actualizar gráfico:', error);
+                            }
+                        }, 300);
+                    });
+                    
+                    // Ya no necesitamos llamar a actualizarGraficoEspecialidades aquí porque lo hacemos en el evento tab
+                    
+                    // Añadimos botones temporales para forzar la carga de gráficos (para depuración)
+                    $('#dia-content').prepend(`
+                        <div class="alert alert-warning mt-2 mb-2">
+                            <button type="button" id="btn-forzar-grafico-dias" class="btn btn-sm btn-info">Forzar Carga Gráfico Días</button>
+                        </div>
+                    `);
+                    
+                    $('#horario-content').prepend(`
+                        <div class="alert alert-warning mt-2 mb-2">
+                            <button type="button" id="btn-forzar-grafico-horarios" class="btn btn-sm btn-info">Forzar Carga Gráfico Horarios</button>
+                        </div>
+                    `);
+                    
+                    // Eventos para los botones de forzar carga
+                    $('#btn-forzar-grafico-dias').on('click', function() {
+                        console.log('Forzando carga de gráfico de días');
+                        if (window.datosComparativaActual && window.datosComparativaActual.dimensiones_adicionales) {
+                            actualizarGraficoDias(window.datosComparativaActual);
+                        } else {
+                            alert('No hay datos disponibles');
+                        }
+                    });
+                    
+                    $('#btn-forzar-grafico-horarios').on('click', function() {
+                        console.log('Forzando carga de gráfico de horarios');
+                        if (window.datosComparativaActual && window.datosComparativaActual.dimensiones_adicionales) {
+                            actualizarGraficoHorarios(window.datosComparativaActual);
+                        } else {
+                            alert('No hay datos disponibles');
+                        }
+                    });
+                    
+                    // Mostrar el contenedor de dimensiones adicionales
+                    document.getElementById('dimensiones-adicionales-container').style.display = 'block';
+                } else {
+                    console.log('No se recibieron datos de dimensiones adicionales');
+                    document.getElementById('dimensiones-adicionales-container').style.display = 'none';
+                }
+                
+                // Mostrar contenedor de resultados
+                document.getElementById('loading-container').style.display = 'none';
+                document.getElementById('resultados-container').style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error al obtener datos comparativos:', error);
+                mostrarMensajeError('Ocurrió un error al cargar los datos comparativos.');
+            });
+    }
+    
+    // Función para validar fechas
+    function validarFechas(filtros) {
+        console.log('Validando fechas:', filtros);
+        
+        // Verificar que las fechas no estén vacías
+        if (!filtros || !filtros.fecha_inicio1 || !filtros.fecha_fin1 || !filtros.fecha_inicio2 || !filtros.fecha_fin2) {
+            console.error('Error: Hay fechas vacías o parámetros no válidos');
+            alert('Por favor, selecciona fechas válidas para ambos períodos.');
+            return false;
+        }
+        
+        // Convertir strings a objetos Date
+        const inicio1 = new Date(filtros.fecha_inicio1);
+        const fin1 = new Date(filtros.fecha_fin1);
+        const inicio2 = new Date(filtros.fecha_inicio2);
+        const fin2 = new Date(filtros.fecha_fin2);
+        
+        console.log('Fechas convertidas:', {
+            inicio1: inicio1.toISOString(),
+            fin1: fin1.toISOString(),
+            inicio2: inicio2.toISOString(),
+            fin2: fin2.toISOString()
+        });
+        
+        // Verificar que las fechas sean válidas
+        if (isNaN(inicio1) || isNaN(fin1) || isNaN(inicio2) || isNaN(fin2)) {
+            console.log('Error: Hay fechas inválidas');
+            return false;
+        }
+        
+        // Verificar que la fecha de inicio sea anterior a la fecha de fin en ambos períodos
+        if (inicio1 > fin1 || inicio2 > fin2) {
+            console.log('Error: La fecha de inicio es posterior a la fecha de fin');
+            return false;
+        }
+        
+        // Las fechas parecen ser válidas
+        console.log('Validación de fechas exitosa');
+        return true;
+    }
+    
+    // Función para formatear fecha para mostrar
+    function formatearFechaPeriodo(fechaStr) {
+        const fecha = new Date(fechaStr);
+        return fecha.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+    
+    // Función para mostrar mensaje de error
+    function mostrarMensajeError(mensaje) {
+        console.log('Mostrando mensaje de error:', mensaje);
+        
+        // Ocultar contenedores que no se necesitan
+        document.getElementById('loading-container').style.display = 'none';
+        document.getElementById('resultados-container').style.display = 'none';
+        
+        // Mostrar contenedor de sin datos/error
+        const sinDatosContainer = document.getElementById('sin-datos-container');
+        sinDatosContainer.style.display = 'block';
+        
+        // Actualizar el mensaje de error
+        const titulo = sinDatosContainer.querySelector('h4');
+        const parrafo = sinDatosContainer.querySelector('p');
+        
+        if (titulo && parrafo) {
+            titulo.textContent = 'Error';
+            parrafo.textContent = mensaje;
+        } else {
+            console.error('No se encontraron los elementos para mostrar el mensaje de error');
+        }
+    }
+    
+    // Función para actualizar el gráfico comparativo
+    function actualizarGraficoComparativo(data) {
+        const ctx = document.getElementById('grafico-comparativo').getContext('2d');
+        
+        // Destruir gráfico anterior si existe
+        if (graficoComparativo) {
+            graficoComparativo.destroy();
+        }
+        
+        console.log('Actualizando gráfico con datos:', data);
+        
+        // Verificar que los datos existan
+        if (!data || !data.periodo1 || !data.periodo2 || 
+            !data.periodo1.datos || !data.periodo2.datos) {
+            console.error('Datos inválidos para el gráfico');
+            return;
+        }
+        
+        // Definir los estados correctos de la BD (minusculas)
+        const estados = ['pendientes', 'confirmadas', 'atendidas', 'canceladas'];
+        
+        // Crear arrays seguros para cada periodo
+        const dataPeriodo1 = [];
+        const dataPeriodo2 = [];
+        
+        // Llenar los arrays con valores, validando que existan
+        estados.forEach(estado => {
+            // Usar 0 si no existe la propiedad
+            const valor1 = data.periodo1.datos[estado] !== undefined ? data.periodo1.datos[estado] : 0;
+            const valor2 = data.periodo2.datos[estado] !== undefined ? data.periodo2.datos[estado] : 0;
+            
+            dataPeriodo1.push(valor1);
+            dataPeriodo2.push(valor2);
+        });
+        
+        console.log('Datos para gráfico - Período 1:', dataPeriodo1);
+        console.log('Datos para gráfico - Período 2:', dataPeriodo2);
+        
+        // Convertir los nombres de estado para mostrar (primera letra mayúscula)
+        const etiquetas = estados.map(estado => estado.charAt(0).toUpperCase() + estado.slice(1));
+        
+        // Crear nuevo gráfico
+        graficoComparativo = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: etiquetas,
+                datasets: [
+                    {
+                        label: data.periodo1.etiqueta || 'Período 1',
+                        data: dataPeriodo1,
+                        backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: data.periodo2.etiqueta || 'Período 2',
+                        data: dataPeriodo2,
+                        backgroundColor: 'rgba(255, 193, 7, 0.7)',
+                        borderColor: 'rgba(255, 193, 7, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Comparativa de Citas por Estado'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: ${context.parsed.y} citas`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Número de Citas'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Estado de la Cita'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Función para actualizar la tabla comparativa
+    function actualizarTablaComparativa(data) {
+        const tablaBody = document.getElementById('tabla-comparativa');
+        tablaBody.innerHTML = '';
+        
+        // Función para calcular variación y porcentaje
+        function calcularVariacion(valor1, valor2) {
+            const variacion = valor2 - valor1;
+            const porcentaje = valor1 === 0 ? 
+                (valor2 > 0 ? 100 : 0) : 
+                ((valor2 - valor1) / valor1 * 100);
+            return { variacion, porcentaje };
+        }
+        
+        // Función para crear fila de tabla
+        function crearFila(metrica, valor1, valor2) {
+            const { variacion, porcentaje } = calcularVariacion(valor1, valor2);
+            const colorClase = porcentaje > 0 ? 'text-success' : (porcentaje < 0 ? 'text-danger' : '');
+            const iconoTendencia = porcentaje > 0 ? 'fa-arrow-up' : (porcentaje < 0 ? 'fa-arrow-down' : 'fa-equals');
+            
+            return `
+                <tr>
+                    <td><strong>${metrica}</strong></td>
+                    <td class="text-center">${valor1}</td>
+                    <td class="text-center">${valor2}</td>
+                    <td class="text-center ${colorClase}">${variacion > 0 ? '+' : ''}${variacion}</td>
+                    <td class="text-center ${colorClase}">
+                        <i class="fas ${iconoTendencia} mr-1"></i>
+                        ${Math.abs(porcentaje).toFixed(1)}%
+                    </td>
+                </tr>
+            `;
+        }
+        
+        // Estructura corregida según la API
+        console.log('Actualizando tabla con datos:', data);
+        
+        // Agregar fila para total de citas
+        tablaBody.innerHTML += crearFila('Total de Citas', 
+            data.periodo1.datos.total, 
+            data.periodo2.datos.total
+        );
+        
+        // Agregar filas para cada estado (estructura corregida según estados reales de la BD)
+        const estados = [
+            { clave: 'pendientes', nombre: 'Pendientes' },
+            { clave: 'confirmadas', nombre: 'Confirmadas' },
+            { clave: 'atendidas', nombre: 'Atendidas' },
+            { clave: 'canceladas', nombre: 'Canceladas' }
+        ];
+        
+        estados.forEach(estado => {
+            const valor1 = data.periodo1.datos[estado.clave] || 0;
+            const valor2 = data.periodo2.datos[estado.clave] || 0;
+            tablaBody.innerHTML += crearFila(
+                `Citas ${estado.nombre}`, 
+                valor1, 
+                valor2
+            );
+        });
+        
+        // Agregar porcentaje de asistencia
+        tablaBody.innerHTML += crearFila(
+            'Porcentaje de Asistencia', 
+            `${data.periodo1.datos.porcentaje_asistencia.toFixed(1)}%`, 
+            `${data.periodo2.datos.porcentaje_asistencia.toFixed(1)}%`
+        );
+        
+        // Fin de la función
+    }
+    
+    // Función para exportar a PDF
+    function exportarPDF() {
+        // Verificar si hay datos para exportar
+        if (!datosComparativos) {
+            alert('No hay datos para exportar. Por favor, genera un informe primero.');
+            return;
+        }
+        
+        // Crear contenedor temporal para el PDF
+        const contenedor = document.createElement('div');
+        contenedor.className = 'container mt-4';
+        contenedor.innerHTML = `
+            <div class="text-center mb-4">
+                <h2>Reporte Comparativo de Citas</h2>
+                <p>Hospital de Tingo María</p>
+                <p><small>Generado el ${new Date().toLocaleString('es-ES')}</small></p>
+            </div>
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="alert alert-info">
+                        <strong>Período 1:</strong> ${document.getElementById('etiqueta-periodo1').textContent}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="alert alert-warning">
+                        <strong>Período 2:</strong> ${document.getElementById('etiqueta-periodo2').textContent}
+                    </div>
+                </div>
+            </div>
+            <div class="mb-4">
+                <h4>Tabla Comparativa</h4>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr class="bg-light">
+                            <th>Métrica</th>
+                            <th>Período 1</th>
+                            <th>Período 2</th>
+                            <th>Variación</th>
+                            <th>% Cambio</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${document.getElementById('tabla-comparativa').innerHTML}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        // Opciones para html2pdf
+        const opciones = {
+            margin: 10,
+            filename: 'comparativa_citas.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        
+        // Generar PDF
+        html2pdf().from(contenedor).set(opciones).save();
+    }
+    
+    // Función para exportar a Excel
+    function exportarExcel() {
+        // Verificar si hay datos para exportar
+        if (!datosComparativos) {
+            alert('No hay datos para exportar. Por favor, genera un informe primero.');
+            return;
+        }
+        
+        // Crear datos para el Excel
+        const datos = [];
+        
+        // Agregar información de períodos
+        datos.push(['Reporte Comparativo de Citas - Hospital de Tingo María']);
+        datos.push(['Generado el', new Date().toLocaleString('es-ES')]);
+        datos.push([]);
+        datos.push(['Período 1:', document.getElementById('etiqueta-periodo1').textContent]);
+        datos.push(['Período 2:', document.getElementById('etiqueta-periodo2').textContent]);
+        datos.push([]);
+        
+        // Agregar encabezados de tabla
+        datos.push(['Métrica', 'Período 1', 'Período 2', 'Variación', '% Cambio']);
+        
+        // Extraer datos de la tabla
+        const filas = document.getElementById('tabla-comparativa').querySelectorAll('tr');
+        filas.forEach(fila => {
+            const celdas = fila.querySelectorAll('td');
+            const filaDatos = [];
+            
+            // Obtener texto sin formato de cada celda
+            celdas.forEach(celda => {
+                // Limpiar el texto (eliminar iconos y otros elementos HTML)
+                const texto = celda.textContent.trim().replace(/\s+/g, ' ');
+                filaDatos.push(texto);
+            });
+            
+            datos.push(filaDatos);
+        });
+        
+        // Crear libro de trabajo y hoja
+        const libro = XLSX.utils.book_new();
+        const hoja = XLSX.utils.aoa_to_sheet(datos);
+        
+        // Agregar hoja al libro
+        XLSX.utils.book_append_sheet(libro, hoja, 'Comparativa');
+        
+        // Guardar archivo
+        XLSX.writeFile(libro, 'comparativa_citas.xlsx');
+    }
+    
+    // Función para actualizar el gráfico de comparativa por especialidades
+    function actualizarGraficoEspecialidades(datos) {
+        const ctx = document.getElementById('grafico-especialidades').getContext('2d');
+        
+        // Destruir gráfico anterior si existe
+        if (window.graficoEspecialidades) {
+            window.graficoEspecialidades.destroy();
+        }
+        
+        console.log('Actualizando gráfico de especialidades con datos:', datos);
+        
+        // Verificar que existan datos
+        if (!datos || !datos.length) {
+            console.error('No hay datos para el gráfico de especialidades');
+            return;
+        }
+        
+        // Preparar datos para el gráfico
+        const etiquetas = datos.map(item => item.nombre);
+        const porcentajesAsistencia = datos.map(item => item.porcentaje_asistencia);
+        const totalCitas = datos.map(item => item.total);
+        
+        // Crear el gráfico
+        window.graficoEspecialidades = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: etiquetas,
+                datasets: [
+                    {
+                        label: 'Porcentaje de Asistencia',
+                        data: porcentajesAsistencia,
+                        backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Total de Citas',
+                        data: totalCitas,
+                        backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1,
+                        type: 'line',
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Comparativa por Especialidades Médicas'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                if (context.dataset.label === 'Porcentaje de Asistencia') {
+                                    return context.dataset.label + ': ' + context.parsed.y + '%';
+                                } else {
+                                    return context.dataset.label + ': ' + context.parsed.y;
+                                }
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Porcentaje de Asistencia'
+                        },
+                        max: 100,
+                        min: 0
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Total de Citas'
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Función para actualizar el gráfico de comparativa por días de la semana
+    function actualizarGraficoDiasSemana(datos) {
+        const ctx = document.getElementById('grafico-dias').getContext('2d');
+        
+        // Destruir gráfico anterior si existe
+        if (window.graficoDiasSemana) {
+            window.graficoDiasSemana.destroy();
+        }
+        
+        console.log('Actualizando gráfico de días de la semana con datos:', datos);
+        
+        // Verificar que existan datos
+        if (!datos || !Object.keys(datos).length) {
+            console.error('No hay datos para el gráfico de días de la semana');
+            return;
+        }
+        
+        // Preparar datos para el gráfico
+        const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+        
+        // Estados de citas (usar los nombres correctos en minúsculas como en la BD)
+        const estados = [
+            { clave: 'pendientes', nombre: 'Pendientes', color: 'rgba(255, 193, 7, 0.7)', borde: 'rgba(255, 193, 7, 1)' },
+            { clave: 'confirmadas', nombre: 'Confirmadas', color: 'rgba(23, 162, 184, 0.7)', borde: 'rgba(23, 162, 184, 1)' },
+            { clave: 'atendidas', nombre: 'Atendidas', color: 'rgba(40, 167, 69, 0.7)', borde: 'rgba(40, 167, 69, 1)' },
+            { clave: 'canceladas', nombre: 'Canceladas', color: 'rgba(220, 53, 69, 0.7)', borde: 'rgba(220, 53, 69, 1)' }
+        ];
+        
+        // Crear datasets para cada estado
+        const datasets = estados.map(estado => {
+            return {
+                label: estado.nombre,
+                data: diasSemana.map(dia => datos[dia.toLowerCase()]?.[estado.clave] || 0),
+                backgroundColor: estado.color,
+                borderColor: estado.borde,
+                borderWidth: 1
+            };
+        });
+        
+        // Crear el gráfico
+        window.graficoDiasSemana = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: diasSemana,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Citas por Día de la Semana'
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Día de la Semana'
+                        },
+                        stacked: true
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Número de Citas'
+                        },
+                        stacked: true
+                    }
+                }
+            }
+        });
+    }
+    
+    // Función para actualizar el gráfico de comparativa por horarios
+    function actualizarGraficoHorarios(datos) {
+        const ctx = document.getElementById('grafico-horarios').getContext('2d');
+        
+        // Destruir gráfico anterior si existe
+        if (window.graficoHorarios) {
+            window.graficoHorarios.destroy();
+        }
+        
+        console.log('Actualizando gráfico de horarios con datos:', datos);
+        
+        // Verificar que existan datos
+        if (!datos || !datos.mañana || !datos.tarde) {
+            console.error('No hay datos para el gráfico de horarios');
+            return;
+        }
+        
+        // Preparar datos para el gráfico
+        const horarios = ['Mañana', 'Tarde'];
+        const estados = [
+            { clave: 'pendientes', nombre: 'Pendientes', color: 'rgba(255, 193, 7, 0.7)', borde: 'rgba(255, 193, 7, 1)' },
+            { clave: 'confirmadas', nombre: 'Confirmadas', color: 'rgba(23, 162, 184, 0.7)', borde: 'rgba(23, 162, 184, 1)' },
+            { clave: 'atendidas', nombre: 'Atendidas', color: 'rgba(40, 167, 69, 0.7)', borde: 'rgba(40, 167, 69, 1)' },
+            { clave: 'canceladas', nombre: 'Canceladas', color: 'rgba(220, 53, 69, 0.7)', borde: 'rgba(220, 53, 69, 1)' }
+        ];
+        
+        // Normalizar los datos
+        const datosMañana = estados.map(estado => datos.mañana[estado.clave] || 0);
+        const datosTarde = estados.map(estado => datos.tarde[estado.clave] || 0);
+        
+        // Crear el gráfico
+        window.graficoHorarios = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: estados.map(estado => estado.nombre),
+                datasets: [
+                    {
+                        label: 'Mañana',
+                        data: datosMañana,
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(54, 162, 235, 1)'
+                    },
+                    {
+                        label: 'Tarde',
+                        data: datosTarde,
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(255, 99, 132, 1)'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Comparativa de Citas: Mañana vs Tarde'
+                    }
+                },
+                scales: {
+                    r: {
+                        angleLines: {
+                            display: true
+                        },
+                        suggestedMin: 0
+                    }
+                }
+            }
+        });
+    }
+</script>
+
+<!-- Script para gráficos de días de la semana y horarios -->
+<script src="{% static 'js/comparativas_dias_horarios.js' %}"></script>
+{% endblock %}

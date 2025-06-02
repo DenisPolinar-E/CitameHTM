@@ -2,10 +2,12 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseRedirect
 from django.db import transaction
+from django.urls import reverse
 from datetime import datetime
 from .models import Cita, HistorialMedico, Derivacion, Especialidad, Notificacion, Medico, DisponibilidadMedica, Consultorio
+from .utils_notificaciones import crear_notificacion
 
 @login_required
 def atender_paciente(request, cita_id):
@@ -46,6 +48,8 @@ def atender_paciente(request, cita_id):
             diagnostico = request.POST.get('diagnostico', '')
             tratamiento = request.POST.get('tratamiento', '')
             observaciones = request.POST.get('observaciones', '')
+            requiere_derivacion = request.POST.get('requiere_derivacion', 'no')
+            redireccion = request.POST.get('redireccion', 'dashboard')
             
             if not diagnostico or not tratamiento:
                 messages.error(request, "Debes completar el diagnóstico y tratamiento.")
@@ -61,7 +65,7 @@ def atender_paciente(request, cita_id):
                 cita.save()
                 
                 # Crear registro en historial médico
-                HistorialMedico.objects.create(
+                historial = HistorialMedico.objects.create(
                     paciente=cita.paciente,
                     fecha=timezone.now(),
                     diagnostico=diagnostico,
@@ -69,16 +73,36 @@ def atender_paciente(request, cita_id):
                     observaciones=observaciones
                 )
                 
-                # Crear notificación para el paciente
-                Notificacion.objects.create(
+                # Guardar en la sesión si requiere derivación
+                if requiere_derivacion == 'si':
+                    request.session['requiere_derivacion_cita_id'] = cita_id
+                    request.session['historial_id'] = historial.id
+                else:
+                    # Limpiar la sesión si existía previamente
+                    if 'requiere_derivacion_cita_id' in request.session:
+                        del request.session['requiere_derivacion_cita_id']
+                    if 'historial_id' in request.session:
+                        del request.session['historial_id']
+                
+                # Notificar al paciente
+                crear_notificacion(
                     usuario=cita.paciente.usuario,
-                    mensaje=f"Tu cita con el Dr. {cita.medico.usuario.nombres} {cita.medico.usuario.apellidos} ha sido registrada. Revisa tu historial médico para ver el diagnóstico y tratamiento.",
+                    mensaje=f"Tu cita con el Dr. {request.user.nombres} {request.user.apellidos} ha sido atendida. Diagnóstico: {diagnostico[:50]}{'...' if len(diagnostico) > 50 else ''}",
                     tipo='informacion',
-                    importante=True
+                    importante=True,
+                    objeto_relacionado='historial',
+                    objeto_id=cita.paciente.id
                 )
             
             messages.success(request, "Atención médica registrada correctamente.")
-            return redirect('dashboard_medico')
+            
+            # Redirigir según la opción de derivación seleccionada
+            if requiere_derivacion == 'si':
+                # Si requiere derivación, redirigir a la página de derivación
+                return redirect('derivar_paciente', cita_id=cita_id)
+            else:
+                # Si no requiere derivación, redirigir al dashboard
+                return redirect('dashboard_medico')
             
         elif accion == 'derivar':
             # MODIFICACIÓN TEMPORAL: Permitir derivar sin completar atención
@@ -162,6 +186,12 @@ def derivar_paciente(request, cita_id):
     if not hasattr(request.user, 'medico'):
         messages.error(request, "No tienes permisos para acceder a esta página.")
         return redirect('dashboard')
+    
+    # Verificar que la atención requiere derivación
+    session_cita_id = request.session.get('requiere_derivacion_cita_id')
+    if not session_cita_id or int(session_cita_id) != int(cita_id):
+        messages.error(request, "Esta atención médica no requiere derivación a especialista.")
+        return redirect('dashboard_medico')
     
     # Obtener la cita
     cita = get_object_or_404(Cita, id=cita_id)
@@ -247,11 +277,23 @@ def derivar_paciente(request, cita_id):
                         derivacion.save()
                         
                         # Notificar al paciente sobre la cita agendada
-                        Notificacion.objects.create(
+                        crear_notificacion(
                             usuario=cita.paciente.usuario,
                             mensaje=f"Se ha agendado una cita con el especialista Dr. {medico_especialista.usuario.nombres} {medico_especialista.usuario.apellidos} para el {fecha_obj.strftime('%d/%m/%Y')} a las {disponibilidad.hora_inicio.strftime('%H:%M')} en el consultorio {consultorio.codigo}.",
                             tipo='confirmacion',
-                            importante=True
+                            importante=True,
+                            objeto_relacionado='cita',
+                            objeto_id=nueva_cita.id
+                        )
+                        
+                        # Notificar al médico especialista sobre la nueva cita
+                        crear_notificacion(
+                            usuario=medico_especialista.usuario,
+                            mensaje=f"Tienes una nueva cita por derivación para el {fecha_obj.strftime('%d/%m/%Y')} a las {disponibilidad.hora_inicio.strftime('%H:%M')} con el paciente {cita.paciente.usuario.nombres} {cita.paciente.usuario.apellidos}.",
+                            tipo='informacion',
+                            importante=True,
+                            objeto_relacionado='cita',
+                            objeto_id=nueva_cita.id
                         )
                         
                         messages.success(request, f"Paciente derivado y cita agendada correctamente con {medico_especialista.usuario.nombres} {medico_especialista.usuario.apellidos} para el {fecha_obj.strftime('%d/%m/%Y')}.")
@@ -260,19 +302,23 @@ def derivar_paciente(request, cita_id):
                         messages.warning(request, f"Paciente derivado pero no se pudo agendar la cita: {str(e)}")
                         
                         # Crear notificación para el paciente (solo derivación)
-                        Notificacion.objects.create(
+                        crear_notificacion(
                             usuario=cita.paciente.usuario,
                             mensaje=f"Has sido derivado a la especialidad de {especialidad.nombre} por el Dr. {cita.medico.usuario.nombres} {cita.medico.usuario.apellidos}. Por favor, reserva una cita con un especialista.",
                             tipo='informacion',
-                            importante=True
+                            importante=True,
+                            objeto_relacionado='derivacion',
+                            objeto_id=derivacion.id
                         )
                 else:
                     # Crear notificación para el paciente (solo derivación)
-                    Notificacion.objects.create(
+                    crear_notificacion(
                         usuario=cita.paciente.usuario,
                         mensaje=f"Has sido derivado a la especialidad de {especialidad.nombre} por el Dr. {cita.medico.usuario.nombres} {cita.medico.usuario.apellidos}. Por favor, reserva una cita con un especialista.",
                         tipo='informacion',
-                        importante=True
+                        importante=True,
+                        objeto_relacionado='derivacion',
+                        objeto_id=derivacion.id
                     )
                     messages.success(request, f"Paciente derivado correctamente a {especialidad.nombre}.")
                 

@@ -1,0 +1,276 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block title %}Perfil de Admisión - Hospital Tingo María{% endblock %}
+
+{% block page_title %}
+    {% if es_propio %}Mi Perfil{% else %}Perfil de Usuario de Admisión{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Tarjeta de información personal -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-user-tie me-2"></i> Información Personal
+            </h5>
+            {% if es_propio %}
+            <a href="#" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#editarPerfilModal">
+                <i class="fas fa-edit me-1"></i> Editar Perfil
+            </a>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3 text-center mb-4">
+                    {% if usuario.foto_perfil %}
+                    <div class="avatar-container mx-auto mb-3 position-relative" style="width: 150px; height: 150px; border-radius: 50%; overflow: hidden; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#cambiarFotoModal">
+                        <img src="{{ usuario.foto_perfil.url }}" alt="Foto de perfil" class="img-fluid" style="width: 100%; height: 100%; object-fit: cover;">
+                        {% if es_propio %}
+                        <div class="avatar-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background-color: rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.3s;">
+                            <i class="fas fa-camera text-white" style="font-size: 2rem;"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="avatar-container mx-auto mb-3 position-relative" style="width: 150px; height: 150px; background-color: #1e88e5; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#cambiarFotoModal">
+                        <span class="text-white" style="font-size: 4rem;">{{ usuario.nombres|first }}{{ usuario.apellidos|first }}</span>
+                        {% if es_propio %}
+                        <div class="avatar-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background-color: rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.3s;">
+                            <i class="fas fa-camera text-white" style="font-size: 2rem;"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    <h5>{{ usuario.nombres }} {{ usuario.apellidos }}</h5>
+                    <p class="text-muted mb-0">Personal de Admisión</p>
+                    <p class="badge bg-primary mt-2">{{ usuario.username }}</p>
+                </div>
+                <div class="col-md-9">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <p class="text-muted mb-1">Correo Electrónico:</p>
+                            <p class="mb-0"><i class="fas fa-envelope me-2 text-primary"></i>{{ usuario.email }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <p class="text-muted mb-1">Teléfono:</p>
+                            <p class="mb-0"><i class="fas fa-phone me-2 text-primary"></i>{{ usuario.telefono|default:"No registrado" }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <p class="text-muted mb-1">DNI:</p>
+                            <p class="mb-0"><i class="fas fa-id-card me-2 text-primary"></i>{{ usuario.dni }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <p class="text-muted mb-1">Fecha de Nacimiento:</p>
+                            <p class="mb-0"><i class="fas fa-birthday-cake me-2 text-primary"></i>{{ usuario.fecha_nacimiento|date:"d/m/Y" }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <p class="text-muted mb-1">Dirección:</p>
+                            <p class="mb-0"><i class="fas fa-map-marker-alt me-2 text-primary"></i>{{ usuario.direccion|default:"No registrada" }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <p class="text-muted mb-1">Fecha de Registro:</p>
+                            <p class="mb-0"><i class="fas fa-calendar-check me-2 text-primary"></i>{{ usuario.date_joined|date:"d/m/Y" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-left-primary">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h6 class="text-primary font-weight-bold">Citas Registradas Hoy</h6>
+                            <h4 class="mb-0">{{ citas_registradas_hoy }}</h4>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar-plus fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-left-success">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h6 class="text-success font-weight-bold">Citas para Hoy</h6>
+                            <h4 class="mb-0">{{ citas_hoy }}</h4>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar-day fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-left-warning">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h6 class="text-warning font-weight-bold">Citas Pendientes</h6>
+                            <h4 class="mb-0">{{ citas_pendientes }}</h4>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Últimas citas registradas -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-list me-2"></i> Últimas Citas Registradas</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Paciente</th>
+                            <th>Médico</th>
+                            <th>Fecha</th>
+                            <th>Hora</th>
+                            <th>Estado</th>
+                            <th>Fecha de Registro</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cita in ultimas_citas %}
+                        <tr>
+                            <td>{{ cita.paciente.usuario.nombres }} {{ cita.paciente.usuario.apellidos }}</td>
+                            <td>Dr. {{ cita.medico.usuario.nombres }} {{ cita.medico.usuario.apellidos }}</td>
+                            <td>{{ cita.fecha|date:"d/m/Y" }}</td>
+                            <td>{{ cita.hora_inicio|time:"H:i" }}</td>
+                            <td>
+                                {% if cita.estado == 'pendiente' %}
+                                <span class="badge bg-warning">Pendiente</span>
+                                {% elif cita.estado == 'confirmada' %}
+                                <span class="badge bg-info">Confirmada</span>
+                                {% elif cita.estado == 'atendida' %}
+                                <span class="badge bg-success">Atendida</span>
+                                {% elif cita.estado == 'cancelada' %}
+                                <span class="badge bg-danger">Cancelada</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ cita.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">No hay citas registradas</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para cambiar foto de perfil -->
+{% if es_propio %}
+<div class="modal fade" id="cambiarFotoModal" tabindex="-1" aria-labelledby="cambiarFotoModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="cambiarFotoModalLabel">Cambiar Foto de Perfil</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{% url 'subir_foto_perfil' %}" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="foto_perfil" class="form-label">Seleccionar nueva foto</label>
+                        <input class="form-control" type="file" id="foto_perfil" name="foto_perfil" accept="image/png, image/jpeg, image/jpg" required>
+                        <div class="form-text">
+                            <ul class="mb-0 ps-3">
+                                <li>Formatos permitidos: JPG, JPEG, PNG</li>
+                                <li>Tamaño máximo: 1MB</li>
+                                <li>Recomendación: Imagen cuadrada para mejor visualización</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal para editar perfil -->
+{% if es_propio %}
+<div class="modal fade" id="editarPerfilModal" tabindex="-1" aria-labelledby="editarPerfilModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="editarPerfilModalLabel">Editar Perfil</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="#" method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="nombres" class="form-label">Nombres</label>
+                            <input type="text" class="form-control" id="nombres" name="nombres" value="{{ usuario.nombres }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="apellidos" class="form-label">Apellidos</label>
+                            <input type="text" class="form-control" id="apellidos" name="apellidos" value="{{ usuario.apellidos }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">Correo Electrónico</label>
+                            <input type="email" class="form-control" id="email" name="email" value="{{ usuario.email }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="telefono" class="form-label">Teléfono</label>
+                            <input type="tel" class="form-control" id="telefono" name="telefono" value="{{ usuario.telefono|default:'' }}">
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label for="direccion" class="form-label">Dirección</label>
+                            <input type="text" class="form-control" id="direccion" name="direccion" value="{{ usuario.direccion|default:'' }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Efecto hover para el avatar
+        const avatarContainer = document.querySelector('.avatar-container');
+        const avatarOverlay = document.querySelector('.avatar-overlay');
+        
+        if (avatarContainer && avatarOverlay) {
+            avatarContainer.addEventListener('mouseenter', function() {
+                avatarOverlay.style.opacity = '1';
+            });
+            
+            avatarContainer.addEventListener('mouseleave', function() {
+                avatarOverlay.style.opacity = '0';
+            });
+        }
+    });
+</script>
+{% endblock %}

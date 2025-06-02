@@ -11,9 +11,29 @@ def medicos_por_especialidad(request, especialidad_id):
     """
     print(f"[DEBUG] Buscando médicos para la especialidad ID: {especialidad_id}")
     try:
+        # Verificar si la especialidad existe
+        from .models import Especialidad
+        try:
+            especialidad = Especialidad.objects.get(id=especialidad_id)
+            print(f"[DEBUG] Especialidad encontrada: {especialidad.nombre} (ID: {especialidad.id})")
+        except Especialidad.DoesNotExist:
+            print(f"[ERROR] No existe una especialidad con ID: {especialidad_id}")
+            return JsonResponse({'error': f'No existe una especialidad con ID: {especialidad_id}'}, status=404)
+        
+        # Buscar médicos para esta especialidad
         medicos = Medico.objects.filter(especialidad_id=especialidad_id)
         print(f"[DEBUG] Médicos encontrados: {medicos.count()}")
         
+        # Mostrar información de cada médico encontrado
+        for medico in medicos:
+            print(f"[DEBUG] Médico: {medico.usuario.nombres} {medico.usuario.apellidos} (ID: {medico.id})")
+        
+        # Si no hay médicos, devolver un mensaje claro
+        if not medicos.exists():
+            print(f"[AVISO] No hay médicos asignados a la especialidad: {especialidad.nombre}")
+            return JsonResponse([], safe=False)
+        
+        # Construir la respuesta con los datos de los médicos
         data = [
             {
                 'id': medico.id,
@@ -26,7 +46,9 @@ def medicos_por_especialidad(request, especialidad_id):
         print(f"[DEBUG] Datos a devolver: {data}")
         return JsonResponse(data, safe=False)
     except Exception as e:
+        import traceback
         print(f"[ERROR] Error en medicos_por_especialidad: {str(e)}")
+        print(traceback.format_exc())
         return JsonResponse({'error': str(e)}, status=500)
 
 @login_required

@@ -4,6 +4,15 @@
 
 {% block page_title %}Dashboard Médico{% endblock %}
 
+{% block sidebar_menu %}
+<a href="{% url 'dashboard_medico' %}" class="menu-item active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="{% url 'mi_agenda' %}" class="menu-item"><i class="fas fa-calendar-alt"></i> Mi Agenda</a>
+<a href="{% url 'mi_agenda' %}" class="menu-item"><i class="fas fa-calendar-check"></i> Gestión de Citas</a>
+<a href="{% url 'disponibilidad_medica' %}" class="menu-item"><i class="fas fa-clock"></i> Gestionar Horario</a>
+<a href="{% url 'historial_medico' %}" class="menu-item"><i class="fas fa-file-medical-alt"></i> Historial Médico</a>
+<a href="{% url 'perfil_medico' %}" class="menu-item"><i class="fas fa-user-md"></i> Mi Perfil</a>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
     <!-- Stats Row -->

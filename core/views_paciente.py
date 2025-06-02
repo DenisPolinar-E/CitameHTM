@@ -9,6 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from datetime import datetime, timedelta
 
 from .models import Paciente, Especialidad, Medico, Consultorio, Cita, Derivacion, Notificacion, DisponibilidadMedica
+from .utils_notificaciones import crear_notificacion
 
 @login_required
 def reservar_cita(request):
@@ -116,18 +117,24 @@ def reservar_cita(request):
                             derivacion.save()
                         
                         # Crear notificación para el paciente
-                        Notificacion.objects.create(
+                        crear_notificacion(
                             usuario=request.user,
                             mensaje=f'Su cita con {medico.usuario.nombres} {medico.usuario.apellidos} ha sido agendada para el {fecha_obj.strftime("%d/%m/%Y")} a las {hora_obj.strftime("%H:%M")}.',
                             tipo='confirmacion',
-                            importante=True
+                            importante=True,
+                            objeto_relacionado='cita',
+                            objeto_id=cita.id,
+                            creador=request.user
                         )
                         
                         # Crear notificación para el médico
-                        Notificacion.objects.create(
+                        crear_notificacion(
                             usuario=medico.usuario,
                             mensaje=f'Nueva cita agendada con {paciente.usuario.nombres} {paciente.usuario.apellidos} para el {fecha_obj.strftime("%d/%m/%Y")} a las {hora_obj.strftime("%H:%M")}.',
-                            tipo='informacion'
+                            tipo='informacion',
+                            objeto_relacionado='cita',
+                            objeto_id=cita.id,
+                            creador=request.user
                         )
                         
                         messages.success(request, 'Cita reservada exitosamente')

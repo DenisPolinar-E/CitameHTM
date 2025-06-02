@@ -1,0 +1,254 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load static %}
+
+{% block extrahead %}
+<link rel="stylesheet" href="{% static 'css/estilos.css' %}">
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+
+<!-- Cargar Chart.js y sus plugins en el head para asegurar disponibilidad -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-trendline"></script>
+
+<style>
+    .filtro-container {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+    .chart-container {
+        position: relative;
+        height: 350px;
+        width: 100%;
+        margin-bottom: 30px;
+    }
+    .card {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .message-container {
+        text-align: center;
+        padding: 40px;
+    }
+</style>
+{% endblock %}
+
+{% block sidebar_menu %}
+<!-- El menú se cargará dinámicamente mediante la API -->
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-4">Análisis de Tendencias de Citas</h1>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line mr-2"></i>Evolución de Citas por Estado
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Sección de Filtros -->
+                    <div class="filtro-container mb-4">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="fecha_inicio">Fecha Inicio:</label>
+                                    <input type="date" id="fecha_inicio" class="form-control">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="fecha_fin">Fecha Fin:</label>
+                                    <input type="date" id="fecha_fin" class="form-control">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="especialidad">Especialidad:</label>
+                                    <select id="especialidad" class="form-control">
+                                        <option value="0">Todas</option>
+                                        {% for especialidad in especialidades %}
+                                        <option value="{{ especialidad.id }}">{{ especialidad.nombre }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="medico">Médico:</label>
+                                    <select id="medico" class="form-control">
+                                        <option value="0">Todos</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="agrupacion">Agrupar por:</label>
+                                    <select id="agrupacion" class="form-control">
+                                        <option value="dia">Día</option>
+                                        <option value="semana">Semana</option>
+                                        <option value="mes">Mes</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="estados">Estados a mostrar:</label>
+                                    <div class="d-flex">
+                                        <select id="estados" class="form-control" multiple>
+                                            <option value="pendiente" selected>Pendientes</option>
+                                            <option value="confirmada" selected>Confirmadas</option>
+                                            <option value="atendida" selected>Atendidas</option>
+                                            <option value="cancelada" selected>Canceladas</option>
+                                        </select>
+                                    </div>
+                                    <div class="mt-2">
+                                        <button id="btn-seleccionar-todos" class="btn btn-sm btn-outline-secondary" type="button">
+                                            <i class="fas fa-check-square mr-1"></i> Seleccionar Todos
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button id="btn-filtrar" class="btn btn-primary">
+                                    <i class="fas fa-filter mr-2"></i>Filtrar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contenedor para el gráfico de tendencias -->
+                    <div id="tendencias-container">
+                        <div class="chart-container">
+                            <canvas id="tendencias-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Indicadores y métricas -->
+                    <div class="row mt-4">
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Tasa de Atención</h5>
+                                    <h2 id="tasa-atencion">-</h2>
+                                    <p class="mb-0">Citas atendidas vs. programadas</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-danger text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Tasa de Cancelación</h5>
+                                    <h2 id="tasa-cancelacion">-</h2>
+                                    <p class="mb-0">Citas canceladas vs. programadas</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Tendencia Mensual</h5>
+                                    <h2 id="tendencia-mensual">-</h2>
+                                    <p class="mb-0">Variación vs. mes anterior</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Total Citas</h5>
+                                    <h2 id="total-citas">-</h2>
+                                    <p class="mb-0">En el período seleccionado</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mensajes y carga -->
+    <div id="loading" class="message-container d-none">
+        <div class="spinner-border text-primary" role="status">
+            <span class="sr-only">Cargando...</span>
+        </div>
+        <p class="mt-2">Analizando datos, por favor espere...</p>
+    </div>
+    <div id="no-data" class="message-container d-none">
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            No hay datos disponibles para los filtros seleccionados.
+        </div>
+    </div>
+</div>
+
+<!-- Cargamos el script de tendencias después de Chart.js -->
+<script src="{% static 'js/tendencias_citas.js' %}"></script>
+
+<script>
+    // Verificar que Chart esté disponible 
+    console.log('Chart disponible en el script principal:', typeof Chart);
+</script>
+
+<!-- Script de inicialización - eliminamos la doble inicialización -->
+<script>
+    // Esperamos a que el DOM y Chart.js estén completamente cargados
+    window.addEventListener('load', function() {
+        console.log('Iniciando configuración de tendencias desde la plantilla');
+        
+        // Configurar fechas por defecto (último mes)
+        const hoy = new Date();
+        const unMesAtras = new Date();
+        unMesAtras.setMonth(unMesAtras.getMonth() - 1);
+        
+        // Formatear fechas
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        
+        // Establecer fechas en los campos
+        const fechaFin = document.getElementById('fecha_fin');
+        const fechaInicio = document.getElementById('fecha_inicio');
+        
+        if (fechaFin && !fechaFin.value) {
+            fechaFin.value = formatDate(hoy);
+        }
+        
+        if (fechaInicio && !fechaInicio.value) {
+            fechaInicio.value = formatDate(unMesAtras);
+        }
+        
+        // Verificar que Chart esté definido antes de continuar
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js no está cargado correctamente');
+            document.getElementById('no-data').classList.remove('d-none');
+            document.getElementById('no-data').innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Error: No se pudo cargar Chart.js. Por favor, recargue la página.</div>`;
+            return;
+        }
+        
+        console.log('Chart.js cargado correctamente:', typeof Chart);
+        
+        // Cargar datos iniciales después de verificar Chart.js
+        setTimeout(function() {
+            // Cargar médicos iniciales
+            const especialidadSelect = document.getElementById('especialidad');
+            if (especialidadSelect) {
+                cargarMedicos(especialidadSelect.value);
+            }
+            
+            // Iniciar carga de datos
+            cargarTendencias();
+        }, 100);
+    });
+</script>
+{% endblock content %}

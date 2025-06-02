@@ -1,0 +1,401 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Detalle de Seguimiento - Médico{% endblock %}
+
+{% block page_title %}Detalle de Tratamiento{% endblock %}
+
+{% block sidebar_menu %}
+{% if es_medico %}
+<a href="{% url 'dashboard_medico' %}" class="menu-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="{% url 'agenda_medico' %}" class="menu-item"><i class="fas fa-calendar-alt"></i> Mi Agenda</a>
+<a href="{% url 'gestion_citas' %}" class="menu-item"><i class="fas fa-calendar-check"></i> Gestión de Citas</a>
+<a href="{% url 'historial_medico' %}" class="menu-item"><i class="fas fa-file-medical-alt"></i> Historial Médico</a>
+<a href="{% url 'ver_seguimientos' %}" class="menu-item active"><i class="fas fa-clipboard-list"></i> Seguimientos</a>
+<a href="{% url 'programar_seguimientos' %}" class="menu-item"><i class="fas fa-calendar-plus"></i> Programar Seguimiento</a>
+<a href="{% url 'perfil_medico' %}" class="menu-item"><i class="fas fa-user-md"></i> Mi Perfil</a>
+{% elif es_paciente %}
+<a href="{% url 'dashboard_paciente' %}" class="menu-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="{% url 'mis_citas' %}" class="menu-item"><i class="fas fa-calendar-check"></i> Mis Citas</a>
+<a href="{% url 'mi_historial_medico' %}" class="menu-item"><i class="fas fa-file-medical"></i> Mi Historial</a>
+<a href="{% url 'mis_tratamientos' %}" class="menu-item active"><i class="fas fa-clipboard-list"></i> Mis Tratamientos</a>
+<a href="{% url 'perfil_paciente' %}" class="menu-item"><i class="fas fa-user"></i> Mi Perfil</a>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .card-header {
+        border-radius: 10px 10px 0 0 !important;
+        font-weight: 600;
+    }
+    .progress {
+        height: 10px;
+        border-radius: 5px;
+    }
+    .badge-activo {
+        background-color: #4caf50;
+        color: white;
+    }
+    .badge-terminado {
+        background-color: #9e9e9e;
+        color: white;
+    }
+    .badge-cancelado {
+        background-color: #f44336;
+        color: white;
+    }
+    .sesion-card {
+        border-left: 4px solid #e0e0e0;
+        margin-bottom: 15px;
+        transition: all 0.2s ease;
+    }
+    .sesion-card:hover {
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    .sesion-pendiente {
+        border-left-color: #ff9800;
+    }
+    .sesion-programada {
+        border-left-color: #2196f3;
+    }
+    .sesion-completada {
+        border-left-color: #4caf50;
+    }
+    .sesion-cancelada {
+        border-left-color: #f44336;
+    }
+    .sesion-reprogramada {
+        border-left-color: #9c27b0;
+    }
+    .badge-pendiente {
+        background-color: #ff9800;
+        color: white;
+    }
+    .badge-programada {
+        background-color: #2196f3;
+        color: white;
+    }
+    .badge-completada {
+        background-color: #4caf50;
+        color: white;
+    }
+    .badge-cancelada {
+        background-color: #f44336;
+        color: white;
+    }
+    .badge-reprogramada {
+        background-color: #9c27b0;
+        color: white;
+    }
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background-color: #e0e0e0;
+    }
+    .timeline-item {
+        position: relative;
+        margin-bottom: 20px;
+    }
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -30px;
+        top: 0;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: #e0e0e0;
+        border: 3px solid white;
+    }
+    .timeline-item.completada::before {
+        background-color: #4caf50;
+    }
+    .timeline-item.programada::before {
+        background-color: #2196f3;
+    }
+    .timeline-item.pendiente::before {
+        background-color: #ff9800;
+    }
+    .timeline-item.cancelada::before {
+        background-color: #f44336;
+    }
+    .timeline-item.reprogramada::before {
+        background-color: #9c27b0;
+    }
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+    }
+    .evolucion-box {
+        background-color: #f5f5f5;
+        border-radius: 5px;
+        padding: 15px;
+        margin-top: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    {% if es_medico %}
+                    <li class="breadcrumb-item"><a href="{% url 'ver_seguimientos' %}">Seguimientos</a></li>
+                    {% elif es_paciente %}
+                    <li class="breadcrumb-item"><a href="{% url 'mis_tratamientos' %}">Mis Tratamientos</a></li>
+                    {% endif %}
+                    <li class="breadcrumb-item active">Detalle de Tratamiento</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Información del tratamiento -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-clipboard-list me-2"></i> Información del Tratamiento</span>
+                    <span class="badge badge-{{ tratamiento.estado }}">{{ tratamiento.get_estado_display }}</span>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h5>Paciente</h5>
+                            <p>{{ tratamiento.paciente.usuario.nombres }} {{ tratamiento.paciente.usuario.apellidos }}</p>
+                            <p class="text-muted">DNI: {{ tratamiento.paciente.usuario.dni }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Médico</h5>
+                            <p>Dr. {{ tratamiento.medico.usuario.nombres }} {{ tratamiento.medico.usuario.apellidos }}</p>
+                            <p class="text-muted">Especialidad: {{ tratamiento.medico.especialidad.nombre }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <h5>Diagnóstico</h5>
+                            <p>{{ tratamiento.diagnostico }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <h5>Fecha de inicio</h5>
+                            <p>{{ tratamiento.fecha_inicio|date:"d/m/Y" }}</p>
+                        </div>
+                        <div class="col-md-4">
+                            <h5>Fecha estimada de fin</h5>
+                            <p>{{ tratamiento.fecha_fin_estimada|date:"d/m/Y"|default:"No disponible" }}</p>
+                        </div>
+                        <div class="col-md-4">
+                            <h5>Frecuencia</h5>
+                            <p>Cada {{ tratamiento.frecuencia_dias }} días</p>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <h5>Progreso</h5>
+                            <div class="progress mb-2">
+                                <div class="progress-bar bg-primary" role="progressbar" style="width: {{ tratamiento.progreso }}%;" aria-valuenow="{{ tratamiento.progreso }}" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <small>{{ tratamiento.sesiones_completadas }} de {{ tratamiento.cantidad_sesiones }} sesiones completadas</small>
+                                <small>{{ tratamiento.progreso }}% completado</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if tratamiento.notas_seguimiento %}
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <h5>Notas de seguimiento</h5>
+                            <div class="evolucion-box">
+                                {{ tratamiento.notas_seguimiento|linebreaks }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if es_medico and tratamiento.estado == 'activo' %}
+                    <div class="row">
+                        <div class="col-md-12 text-end">
+                            <a href="{% url 'cancelar_tratamiento' tratamiento.id %}" class="btn btn-danger">
+                                <i class="fas fa-times-circle me-2"></i> Cancelar Tratamiento
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Sesiones de seguimiento -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-calendar-check me-2"></i> Sesiones de Seguimiento
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        {% for sesion in sesiones %}
+                            <div class="timeline-item {{ sesion.estado }}">
+                                <div class="card sesion-card sesion-{{ sesion.estado }}">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <h5 class="mb-0">Sesión {{ sesion.numero_sesion }}</h5>
+                                            <span class="badge badge-{{ sesion.estado }}">{{ sesion.get_estado_display }}</span>
+                                        </div>
+                                        
+                                        <div class="row mb-2">
+                                            <div class="col-md-6">
+                                                <p class="mb-1"><strong>Fecha programada:</strong> {{ sesion.fecha_programada|date:"d/m/Y" }}</p>
+                                                {% if sesion.fecha_realizada %}
+                                                <p class="mb-1"><strong>Fecha realizada:</strong> {{ sesion.fecha_realizada|date:"d/m/Y" }}</p>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-md-6">
+                                                {% if sesion.cita %}
+                                                <p class="mb-1"><strong>Cita:</strong> {{ sesion.cita.fecha|date:"d/m/Y" }} {{ sesion.cita.hora_inicio|time:"H:i" }}</p>
+                                                <p class="mb-1"><strong>Consultorio:</strong> {{ sesion.cita.consultorio.codigo }}</p>
+                                                {% else %}
+                                                <p class="mb-1 text-warning"><strong>Sin cita programada</strong></p>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        
+                                        {% if sesion.observaciones %}
+                                        <div class="mb-2">
+                                            <strong>Observaciones:</strong>
+                                            <p class="mb-0">{{ sesion.observaciones }}</p>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if sesion.evolucion %}
+                                        <div class="mb-2">
+                                            <strong>Evolución:</strong>
+                                            <div class="evolucion-box">
+                                                {{ sesion.evolucion|linebreaks }}
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if es_medico %}
+                                        <div class="action-buttons mt-3">
+                                            {% if sesion.estado == 'pendiente' %}
+                                            <a href="{% url 'programar_cita_sesion' sesion.id %}" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-calendar-plus me-1"></i> Programar Cita
+                                            </a>
+                                            {% elif sesion.estado == 'programada' and sesion.cita.estado != 'atendida' %}
+                                            <a href="{% url 'atender_paciente' sesion.cita.id %}" class="btn btn-sm btn-success">
+                                                <i class="fas fa-stethoscope me-1"></i> Atender Paciente
+                                            </a>
+                                            {% elif sesion.estado == 'programada' and sesion.cita.estado == 'atendida' %}
+                                            <a href="{% url 'registrar_evolucion' sesion.id %}" class="btn btn-sm btn-info">
+                                                <i class="fas fa-clipboard me-1"></i> Registrar Evolución
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Información del estado -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-info-circle me-2"></i> Información
+                </div>
+                <div class="card-body">
+                    <h5>Estados de las sesiones</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><span class="badge badge-pendiente">Pendiente</span> - Sesión sin cita programada</li>
+                        <li class="mb-2"><span class="badge badge-programada">Programada</span> - Sesión con cita asignada</li>
+                        <li class="mb-2"><span class="badge badge-completada">Completada</span> - Sesión realizada</li>
+                        <li class="mb-2"><span class="badge badge-cancelada">Cancelada</span> - Sesión cancelada</li>
+                        <li class="mb-2"><span class="badge badge-reprogramada">Reprogramada</span> - Sesión reprogramada</li>
+                    </ul>
+                    
+                    {% if es_paciente %}
+                    <h5 class="mt-4">Recomendaciones</h5>
+                    <ul>
+                        <li>Asista a todas sus citas programadas</li>
+                        <li>Siga las indicaciones médicas entre sesiones</li>
+                        <li>Si no puede asistir, notifique con anticipación</li>
+                    </ul>
+                    {% endif %}
+                    
+                    {% if es_medico %}
+                    <h5 class="mt-4">Acciones disponibles</h5>
+                    <ul>
+                        <li>Programar citas para sesiones pendientes</li>
+                        <li>Atender pacientes en sesiones programadas</li>
+                        <li>Registrar evolución de sesiones atendidas</li>
+                        <li>Cancelar tratamiento si es necesario</li>
+                    </ul>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Próximas sesiones -->
+            {% if tratamiento.estado == 'activo' %}
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-calendar-alt me-2"></i> Próximas Sesiones
+                </div>
+                <div class="card-body">
+                    {% with proximas_sesiones=sesiones|dictsortreversed:"estado"|slice:":3" %}
+                        {% if proximas_sesiones %}
+                            <div class="list-group">
+                                {% for sesion in proximas_sesiones %}
+                                    {% if sesion.estado in 'pendiente,programada' %}
+                                        <div class="list-group-item">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <h6 class="mb-1">Sesión {{ sesion.numero_sesion }}</h6>
+                                                    <p class="mb-1 small">{{ sesion.fecha_programada|date:"d/m/Y" }}</p>
+                                                </div>
+                                                <span class="badge badge-{{ sesion.estado }}">{{ sesion.get_estado_display }}</span>
+                                            </div>
+                                            {% if sesion.cita %}
+                                                <small class="text-muted">
+                                                    Cita: {{ sesion.cita.fecha|date:"d/m/Y" }} {{ sesion.cita.hora_inicio|time:"H:i" }}
+                                                </small>
+                                            {% else %}
+                                                <small class="text-warning">Sin cita programada</small>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-center">No hay próximas sesiones programadas.</p>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

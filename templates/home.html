@@ -1,70 +1,136 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Bienvenido - Sistema de Gestión de Citas{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ STATIC_URL }}css/home.css">
+{% endblock %}
 
 {% block content %}
 <div class="container py-5">
     <!-- Hero Section -->
     <div class="row align-items-center mb-5">
         <div class="col-lg-6">
-            <h1 class="display-4 fw-bold text-primary mb-3">Sistema de Gestión de Citas</h1>
-            <h2 class="h3 mb-4">Hospital de Tingo María</h2>
+            <h1 class="hero-title">Sistema de Gestión de Citas</h1>
+            <h2 class="hero-subtitle">Hospital de Tingo María</h2>
             <p class="lead mb-4">
                 Plataforma integral para la gestión de citas médicas, historiales clínicos y seguimiento de pacientes. Diseñado para mejorar la experiencia de atención en el Hospital de Tingo María.
             </p>
-            <div class="d-grid gap-2 d-md-flex justify-content-md-start">
-                <a href="{% url 'login' %}" class="btn btn-primary btn-lg px-4 me-md-2">
+            <div class="d-grid gap-3 d-md-flex justify-content-md-start mb-4">
+                <a href="{% url 'login' %}" class="btn btn-primary btn-lg px-4 me-md-2 btn-hover-effect">
                     <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
                 </a>
-                <a href="{% url 'registro' %}" class="btn btn-outline-secondary btn-lg px-4">
+                <a href="{% url 'registro' %}" class="btn btn-outline-secondary btn-lg px-4 btn-hover-effect">
                     <i class="fas fa-user-plus me-2"></i>Registrarse
                 </a>
             </div>
+            <div class="d-flex align-items-center mt-4">
+                <div class="d-flex align-items-center me-4">
+                    <i class="fas fa-check-circle text-success me-2"></i>
+                    <span>Atención rápida</span>
+                </div>
+                <div class="d-flex align-items-center me-4">
+                    <i class="fas fa-check-circle text-success me-2"></i>
+                    <span>Seguimiento médico</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-check-circle text-success me-2"></i>
+                    <span>Recordatorios</span>
+                </div>
+            </div>
         </div>
         <div class="col-lg-6 mt-5 mt-lg-0">
-            <img src="https://img.freepik.com/free-vector/doctor-examining-patient-clinic-illustrated_23-2148856559.jpg" alt="Atención médica" class="img-fluid rounded shadow-lg">
+            <img src="https://img.freepik.com/free-vector/doctor-examining-patient-clinic-illustrated_23-2148856559.jpg" alt="Atención médica" class="img-fluid rounded shadow-lg hero-image">
+        </div>
+    </div>
+    
+    <!-- Estadísticas -->    
+    <div class="stats-container my-5">
+        <div class="row">
+            <div class="col-12 text-center mb-4">
+                <h2 class="h2 fw-bold section-title">Nuestras Cifras</h2>
+                <p class="lead mt-3">Comprometidos con la excelencia en atención médica</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3 stat-item">
+                <div class="stat-icon">
+                    <i class="fas fa-user-check text-primary" style="font-size: 1.8rem;"></i>
+                </div>
+                <div class="stat-number" data-count="5000">5,000+</div>
+                <div class="stat-label">Pacientes atendidos</div>
+                <p class="small text-muted mt-3">Confianza de miles de pacientes</p>
+            </div>
+            <div class="col-md-3 stat-item">
+                <div class="stat-icon">
+                    <i class="fas fa-user-md text-primary" style="font-size: 1.8rem;"></i>
+                </div>
+                <div class="stat-number" data-count="30">30+</div>
+                <div class="stat-label">Médicos especialistas</div>
+                <p class="small text-muted mt-3">Profesionales calificados</p>
+            </div>
+            <div class="col-md-3 stat-item">
+                <div class="stat-icon">
+                    <i class="fas fa-stethoscope text-primary" style="font-size: 1.8rem;"></i>
+                </div>
+                <div class="stat-number" data-count="8">8</div>
+                <div class="stat-label">Especialidades médicas</div>
+                <p class="small text-muted mt-3">Atención integral en salud</p>
+            </div>
+            <div class="col-md-3 stat-item">
+                <div class="stat-icon">
+                    <i class="fas fa-smile text-primary" style="font-size: 1.8rem;"></i>
+                </div>
+                <div class="stat-number" data-count="98">98%</div>
+                <div class="stat-label">Satisfacción de pacientes</div>
+                <p class="small text-muted mt-3">Excelencia en servicio</p>
+            </div>
         </div>
     </div>
     
     <!-- Features Section -->
     <div class="row my-5">
-        <div class="col-12 text-center mb-4">
-            <h2 class="h2 fw-bold">Servicios Disponibles</h2>
-            <p class="lead">Conoce las ventajas de nuestro sistema de gestión de citas</p>
+        <div class="col-12 text-center mb-5">
+            <h2 class="h2 fw-bold section-title">Servicios Disponibles</h2>
+            <p class="lead mt-3">Conoce las ventajas de nuestro sistema de gestión de citas</p>
         </div>
         
         <div class="col-md-4 mb-4">
-            <div class="card h-100 border-0 shadow-sm">
+            <div class="card service-card h-100 border-0 shadow-sm">
                 <div class="card-body text-center p-4">
-                    <div class="mb-3">
-                        <i class="fas fa-calendar-check text-primary" style="font-size: 3rem;"></i>
+                    <div class="service-icon-container">
+                        <i class="fas fa-calendar-check service-icon text-primary"></i>
                     </div>
-                    <h3 class="h5 card-title">Reserva de Citas</h3>
+                    <h3 class="service-title">Reserva de Citas</h3>
                     <p class="card-text">Agenda tus citas médicas de forma rápida y sencilla, eligiendo especialidad, médico y horario disponible.</p>
+                    <a href="{% url 'login' %}" class="btn btn-sm btn-outline-primary mt-3">Reservar ahora <i class="fas fa-arrow-right ms-1"></i></a>
                 </div>
             </div>
         </div>
         
         <div class="col-md-4 mb-4">
-            <div class="card h-100 border-0 shadow-sm">
+            <div class="card service-card h-100 border-0 shadow-sm">
                 <div class="card-body text-center p-4">
-                    <div class="mb-3">
-                        <i class="fas fa-file-medical-alt text-primary" style="font-size: 3rem;"></i>
+                    <div class="service-icon-container">
+                        <i class="fas fa-file-medical-alt service-icon text-primary"></i>
                     </div>
-                    <h3 class="h5 card-title">Historial Médico</h3>
+                    <h3 class="service-title">Historial Médico</h3>
                     <p class="card-text">Accede a tu historial médico completo, con diagnósticos, tratamientos y seguimiento de tus consultas anteriores.</p>
+                    <a href="{% url 'login' %}" class="btn btn-sm btn-outline-primary mt-3">Ver historial <i class="fas fa-arrow-right ms-1"></i></a>
                 </div>
             </div>
         </div>
         
         <div class="col-md-4 mb-4">
-            <div class="card h-100 border-0 shadow-sm">
+            <div class="card service-card h-100 border-0 shadow-sm">
                 <div class="card-body text-center p-4">
-                    <div class="mb-3">
-                        <i class="fas fa-bell text-primary" style="font-size: 3rem;"></i>
+                    <div class="service-icon-container">
+                        <i class="fas fa-bell service-icon text-primary"></i>
                     </div>
-                    <h3 class="h5 card-title">Notificaciones</h3>
+                    <h3 class="service-title">Notificaciones</h3>
                     <p class="card-text">Recibe recordatorios de tus próximas citas, resultados disponibles y comunicaciones importantes del hospital.</p>
+                    <a href="{% url 'login' %}" class="btn btn-sm btn-outline-primary mt-3">Activar notificaciones <i class="fas fa-arrow-right ms-1"></i></a>
                 </div>
             </div>
         </div>
@@ -72,79 +138,134 @@
     
     <!-- Specialties Section -->
     <div class="row my-5">
-        <div class="col-12 text-center mb-4">
-            <h2 class="h2 fw-bold">Especialidades Médicas</h2>
-            <p class="lead">Contamos con profesionales en diversas áreas de la salud</p>
+        <div class="col-12 text-center mb-5">
+            <h2 class="h2 fw-bold section-title">Especialidades Médicas</h2>
+            <p class="lead mt-3">Contamos con profesionales en diversas áreas de la salud</p>
         </div>
         
         <div class="col-md-3 col-sm-6 mb-4">
-            <div class="card h-100 border-0 shadow-sm">
+            <div class="card specialty-card h-100 border-0 shadow-sm">
                 <div class="card-body text-center p-3">
-                    <i class="fas fa-heartbeat text-danger mb-3" style="font-size: 2rem;"></i>
-                    <h4 class="h6">Cardiología</h4>
+                    <i class="fas fa-heartbeat specialty-icon text-danger mb-3" style="font-size: 2rem;"></i>
+                    <h4 class="specialty-title">Cardiología</h4>
+                    <p class="small text-muted mt-2">Especialistas en salud cardiovascular</p>
                 </div>
             </div>
         </div>
         
         <div class="col-md-3 col-sm-6 mb-4">
-            <div class="card h-100 border-0 shadow-sm">
+            <div class="card specialty-card h-100 border-0 shadow-sm">
                 <div class="card-body text-center p-3">
-                    <i class="fas fa-brain text-info mb-3" style="font-size: 2rem;"></i>
-                    <h4 class="h6">Neurología</h4>
+                    <i class="fas fa-brain specialty-icon text-info mb-3" style="font-size: 2rem;"></i>
+                    <h4 class="specialty-title">Neurología</h4>
+                    <p class="small text-muted mt-2">Diagnóstico y tratamiento neuronal</p>
                 </div>
             </div>
         </div>
         
         <div class="col-md-3 col-sm-6 mb-4">
-            <div class="card h-100 border-0 shadow-sm">
+            <div class="card specialty-card h-100 border-0 shadow-sm">
                 <div class="card-body text-center p-3">
-                    <i class="fas fa-bone text-warning mb-3" style="font-size: 2rem;"></i>
-                    <h4 class="h6">Traumatología</h4>
+                    <i class="fas fa-bone specialty-icon text-warning mb-3" style="font-size: 2rem;"></i>
+                    <h4 class="specialty-title">Traumatología</h4>
+                    <p class="small text-muted mt-2">Especialistas en sistema óseo</p>
                 </div>
             </div>
         </div>
         
         <div class="col-md-3 col-sm-6 mb-4">
-            <div class="card h-100 border-0 shadow-sm">
+            <div class="card specialty-card h-100 border-0 shadow-sm">
                 <div class="card-body text-center p-3">
-                    <i class="fas fa-tooth text-primary mb-3" style="font-size: 2rem;"></i>
-                    <h4 class="h6">Odontología</h4>
+                    <i class="fas fa-tooth specialty-icon text-primary mb-3" style="font-size: 2rem;"></i>
+                    <h4 class="specialty-title">Odontología</h4>
+                    <p class="small text-muted mt-2">Salud dental y bucal</p>
                 </div>
             </div>
         </div>
         
         <div class="col-md-3 col-sm-6 mb-4">
-            <div class="card h-100 border-0 shadow-sm">
+            <div class="card specialty-card h-100 border-0 shadow-sm">
                 <div class="card-body text-center p-3">
-                    <i class="fas fa-eye text-success mb-3" style="font-size: 2rem;"></i>
-                    <h4 class="h6">Oftalmología</h4>
+                    <i class="fas fa-eye specialty-icon text-success mb-3" style="font-size: 2rem;"></i>
+                    <h4 class="specialty-title">Oftalmología</h4>
+                    <p class="small text-muted mt-2">Cuidado de la salud visual</p>
                 </div>
             </div>
         </div>
         
         <div class="col-md-3 col-sm-6 mb-4">
-            <div class="card h-100 border-0 shadow-sm">
+            <div class="card specialty-card h-100 border-0 shadow-sm">
                 <div class="card-body text-center p-3">
-                    <i class="fas fa-child text-danger mb-3" style="font-size: 2rem;"></i>
-                    <h4 class="h6">Pediatría</h4>
+                    <i class="fas fa-child specialty-icon text-danger mb-3" style="font-size: 2rem;"></i>
+                    <h4 class="specialty-title">Pediatría</h4>
+                    <p class="small text-muted mt-2">Atención médica infantil</p>
                 </div>
             </div>
         </div>
         
         <div class="col-md-3 col-sm-6 mb-4">
-            <div class="card h-100 border-0 shadow-sm">
+            <div class="card specialty-card h-100 border-0 shadow-sm">
                 <div class="card-body text-center p-3">
-                    <i class="fas fa-venus text-pink mb-3" style="font-size: 2rem;"></i>
-                    <h4 class="h6">Ginecología</h4>
+                    <i class="fas fa-venus specialty-icon text-pink mb-3" style="font-size: 2rem;"></i>
+                    <h4 class="specialty-title">Ginecología</h4>
+                    <p class="small text-muted mt-2">Salud femenina integral</p>
                 </div>
             </div>
         </div>
         
         <div class="col-md-3 col-sm-6 mb-4">
-            <div class="card h-100 border-0 shadow-sm">
+            <div class="card specialty-card h-100 border-0 shadow-sm">
                 <div class="card-body text-center p-3">
-                    <i class="fas fa-stethoscope text-secondary mb-3" style="font-size: 2rem;"></i>
-                    <h4 class="h6">Medicina General</h4>
+                    <i class="fas fa-stethoscope specialty-icon text-secondary mb-3" style="font-size: 2rem;"></i>
+                    <h4 class="specialty-title">Medicina General</h4>
+                    <p class="small text-muted mt-2">Atención médica primaria</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Testimonios -->
+    <div class="row my-5">
+        <div class="col-12 text-center mb-5">
+            <h2 class="h2 fw-bold section-title">Testimonios</h2>
+            <p class="lead mt-3">Lo que nuestros pacientes dicen sobre nosotros</p>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="testimonial-card">
+                <p class="testimonial-text">"El sistema de citas es muy fácil de usar. Pude agendar mi cita rápidamente y recibí recordatorios oportunos. La atención médica fue excelente."</p>
+                <div class="testimonial-author">
+                    <img src="https://randomuser.me/api/portraits/women/32.jpg" alt="Paciente" class="testimonial-avatar">
+                    <div>
+                        <h5 class="testimonial-name">María López</h5>
+                        <p class="testimonial-role">Paciente de Cardiología</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="testimonial-card">
+                <p class="testimonial-text">"Gracias al sistema de notificaciones, nunca olvido mis citas. El acceso a mi historial médico me permite estar al tanto de mi tratamiento en todo momento."</p>
+                <div class="testimonial-author">
+                    <img src="https://randomuser.me/api/portraits/men/44.jpg" alt="Paciente" class="testimonial-avatar">
+                    <div>
+                        <h5 class="testimonial-name">Carlos Mendoza</h5>
+                        <p class="testimonial-role">Paciente de Traumatología</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="testimonial-card">
+                <p class="testimonial-text">"Como médico, el sistema me permite organizar mejor mi agenda y dar seguimiento a mis pacientes. Es una herramienta indispensable para mi práctica diaria."</p>
+                <div class="testimonial-author">
+                    <img src="https://randomuser.me/api/portraits/women/68.jpg" alt="Médico" class="testimonial-avatar">
+                    <div>
+                        <h5 class="testimonial-name">Dra. Ana Castillo</h5>
+                        <p class="testimonial-role">Pediatra</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -153,20 +274,93 @@
     <!-- Call to Action -->
     <div class="row my-5">
         <div class="col-12">
-            <div class="bg-primary text-white p-5 rounded-3 shadow">
+            <div class="cta-section text-white shadow">
                 <div class="row align-items-center">
                     <div class="col-lg-8">
-                        <h2 class="fw-bold">¿Listo para mejorar tu experiencia médica?</h2>
-                        <p class="lead mb-0">Regístrate ahora y comienza a gestionar tus citas médicas de manera eficiente.</p>
+                        <h2 class="cta-title">¿Listo para mejorar tu experiencia médica?</h2>
+                        <p class="lead mb-4">Regístrate ahora y comienza a gestionar tus citas médicas de manera eficiente.</p>
+                        <div class="d-flex flex-wrap">
+                            <div class="me-4 mb-3 mb-lg-0">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    <span>Proceso sencillo</span>
+                                </div>
+                            </div>
+                            <div class="me-4 mb-3 mb-lg-0">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    <span>Registro gratuito</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    <span>Soporte 24/7</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
-                        <a href="{% url 'registro' %}" class="btn btn-light btn-lg px-4">
+                    <div class="col-lg-4 text-lg-end mt-4 mt-lg-0">
+                        <a href="{% url 'registro' %}" class="btn btn-light btn-lg px-4 cta-btn">
                             <i class="fas fa-user-plus me-2"></i>Crear Cuenta
                         </a>
+                        <div class="mt-3 text-center text-lg-end">
+                            <a href="{% url 'login' %}" class="text-white text-decoration-none">
+                                ¿Ya tienes cuenta? <u>Inicia sesión</u>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+    
+    <!-- FAQ Section -->
+    <div class="row my-5">
+        <div class="col-12 text-center mb-5">
+            <h2 class="h2 fw-bold section-title">Preguntas Frecuentes</h2>
+            <p class="lead mt-3">Resolvemos tus dudas sobre nuestro sistema</p>
+        </div>
+        
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <h5 class="card-title fw-bold mb-3">¿Cómo puedo agendar una cita?</h5>
+                    <p class="card-text">Para agendar una cita, primero debes registrarte en nuestro sistema. Luego, inicia sesión y selecciona la opción "Reservar Cita" donde podrás elegir especialidad, médico y horario disponible.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <h5 class="card-title fw-bold mb-3">¿Puedo cancelar o reprogramar mi cita?</h5>
+                    <p class="card-text">Sí, puedes cancelar o reprogramar tu cita hasta 24 horas antes de la hora programada. Para hacerlo, ingresa a tu cuenta, ve a "Mis Citas" y selecciona la opción correspondiente.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <h5 class="card-title fw-bold mb-3">¿Cómo puedo ver mi historial médico?</h5>
+                    <p class="card-text">Tu historial médico está disponible en la sección "Mi Historial" dentro de tu cuenta. Allí podrás ver todas tus consultas anteriores, diagnósticos y tratamientos.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <h5 class="card-title fw-bold mb-3">¿Recibiré recordatorios de mis citas?</h5>
+                    <p class="card-text">Sí, nuestro sistema envía recordatorios automáticos 24 horas antes de tu cita. Además, puedes configurar notificaciones adicionales en la sección "Mi Perfil".</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block js %}
+<script src="{% static 'js/stats-counter.js' %}"></script>
 {% endblock %}

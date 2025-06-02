@@ -1,0 +1,148 @@
+{
+    "estadisticas": {
+        "total_pacientes": 2,
+        "total_medicos": 59,
+        "total_citas": 23,
+        "citas_pendientes": 6,
+        "citas_atendidas": 15
+    },
+    "notificaciones_no_leidas": 0,
+    "menu": [
+        {
+            "nombre": "Analisis Temporal",
+            "icono": "fa-clock",
+            "ruta": "#",
+            "es_desplegable": true,
+            "id": "analisisTemporalDropdown",
+            "submenus": [
+                {
+                    "nombre": "Distribución de Citas",
+                    "icono": "fa-chart-bar",
+                    "ruta": "/administrador/analisis-temporal/distribucion/"
+                },
+                {
+                    "nombre": "Comparativas",
+                    "icono": "fa-chart-line",
+                    "ruta": "/administrador/analisis-temporal/comparativas/"
+                },
+                {
+                    "nombre": "Tendencias",
+                    "icono": "fa-chart-area",
+                    "ruta": "/administrador/analisis-temporal/tendencias/"
+                },
+                {
+                    "nombre": "Tasas de Asistencia",
+                    "icono": "fa-calendar-check",
+                    "ruta": "/administrador/analisis-temporal/asistencia/"
+                }
+            ]
+        },
+        {
+            "nombre": "Analisis por Origen",
+            "icono": "fa-sitemap",
+            "ruta": "#",
+            "es_desplegable": true,
+            "id": "analisisOrigenDropdown",
+            "submenus": [
+                {
+                    "nombre": "Admisión",
+                    "icono": "fa-clipboard-list",
+                    "ruta": "/administrador/analisis-origen/admision/"
+                },
+                {
+                    "nombre": "Derivación",
+                    "icono": "fa-share-nodes",
+                    "ruta": "/administrador/analisis-origen/derivacion/"
+                },
+                {
+                    "nombre": "Seguimiento",
+                    "icono": "fa-clipboard-check",
+                    "ruta": "/administrador/analisis-origen/seguimiento/"
+                }
+            ]
+        },
+        {
+            "nombre": "Analisis",
+            "icono": "fa-stethoscope",
+            "ruta": "/administrador/analisis-especialidad/"
+        },
+        {
+            "nombre": "Anaisis por MÃ©dico",
+            "icono": "fa-user-md",
+            "ruta": "/administrador/analisis-medico/"
+        },
+        {
+            "nombre": "Analisis de Estado",
+            "icono": "fa-list-check",
+            "ruta": "#",
+            "es_desplegable": true,
+            "id": "analisisEstadoDropdown",
+            "submenus": [
+                {
+                    "nombre": "Citas Completadas",
+                    "icono": "fa-check-circle",
+                    "ruta": "/administrador/analisis-estado/completadas/"
+                },
+                {
+                    "nombre": "Citas Canceladas",
+                    "icono": "fa-times-circle",
+                    "ruta": "/administrador/analisis-estado/canceladas/"
+                },
+                {
+                    "nombre": "Inasistencias",
+                    "icono": "fa-calendar-xmark",
+                    "ruta": "/administrador/analisis-estado/inasistencias/"
+                }
+            ]
+        },
+        {
+            "nombre": "Reportes Especiales",
+            "icono": "fa-file-alt",
+            "ruta": "#",
+            "es_desplegable": true,
+            "id": "reportesEspecialesDropdown",
+            "submenus": [
+                {
+                    "nombre": "Pacientes",
+                    "icono": "fa-users",
+                    "ruta": "/administrador/especiales/pacientes/"
+                },
+                {
+                    "nombre": "Satisfacción",
+                    "icono": "fa-smile",
+                    "ruta": "/administrador/especiales/satisfaccion/"
+                },
+                {
+                    "nombre": "Indicadores Clave",
+                    "icono": "fa-key",
+                    "ruta": "/administrador/especiales/indicadores/"
+                }
+            ]
+        },
+        {
+            "nombre": "Control de Inasistencias",
+            "icono": "fa-calendar-xmark",
+            "ruta": "/admin/inasistencias/"
+        },
+        {
+            "nombre": "Usuarios del Sistema",
+            "icono": "fa-users-gear",
+            "ruta": "/admin/usuarios/"
+        },
+        {
+            "nombre": "Historial MÃ©dico",
+            "icono": "fa-notes-medical",
+            "ruta": "/admin/historial/"
+        },
+        {
+            "nombre": "Mi Perfil",
+            "icono": "fa-user",
+            "ruta": "/admin/perfil/"
+        },
+        {
+            "nombre": "Notificaciones",
+            "icono": "fa-bell",
+            "ruta": "/admin/notificaciones/"
+        }
+    ]
+}

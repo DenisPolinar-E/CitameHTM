@@ -81,6 +81,7 @@ class Usuario(AbstractUser):
     fecha_nacimiento = models.DateField(null=True, blank=True)
     sexo = models.CharField(max_length=1, choices=SEXO_CHOICES, blank=True)
     rol = models.ForeignKey(Rol, on_delete=models.SET_NULL, null=True, related_name='usuarios')
+    foto_perfil = models.ImageField(upload_to='fotos_perfil/', null=True, blank=True)
     
     def __str__(self):
         return f"{self.nombres} {self.apellidos} ({self.dni})"
@@ -199,16 +200,92 @@ class TratamientoProgramado(models.Model):
     medico = models.ForeignKey(Medico, on_delete=models.CASCADE, related_name='tratamientos_programados')
     diagnostico = models.TextField()
     cantidad_sesiones = models.PositiveIntegerField()
+    sesiones_completadas = models.PositiveIntegerField(default=0)
     frecuencia_dias = models.PositiveIntegerField()
     fecha_inicio = models.DateField()
+    fecha_fin_estimada = models.DateField(null=True, blank=True)
     estado = models.CharField(max_length=10, choices=ESTADO_TRATAMIENTO_CHOICES, default='activo')
+    notas_seguimiento = models.TextField(blank=True, help_text='Notas generales sobre el progreso del tratamiento')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
         return f"Tratamiento de {self.paciente} con {self.medico} - {self.cantidad_sesiones} sesiones"
     
+    def progreso(self):
+        """Retorna el porcentaje de progreso del tratamiento"""
+        if self.cantidad_sesiones > 0:
+            return int((self.sesiones_completadas / self.cantidad_sesiones) * 100)
+        return 0
+    
+    def calcular_fecha_fin(self):
+        """Calcula la fecha estimada de finalización basada en la frecuencia y cantidad de sesiones"""
+        from datetime import timedelta
+        if self.fecha_inicio and self.frecuencia_dias and self.cantidad_sesiones:
+            dias_totales = self.frecuencia_dias * (self.cantidad_sesiones - 1)
+            return self.fecha_inicio + timedelta(days=dias_totales)
+        return None
+    
+    def save(self, *args, **kwargs):
+        # Calcular fecha fin estimada si no está establecida
+        if not self.fecha_fin_estimada:
+            self.fecha_fin_estimada = self.calcular_fecha_fin()
+        super().save(*args, **kwargs)
+    
     class Meta:
         verbose_name = 'Tratamiento Programado'
         verbose_name_plural = 'Tratamientos Programados'
+        ordering = ['-created_at']
+
+
+class SeguimientoSesion(models.Model):
+    """Modelo para registrar cada sesión de seguimiento de un tratamiento"""
+    tratamiento = models.ForeignKey(TratamientoProgramado, on_delete=models.CASCADE, related_name='sesiones')
+    cita = models.OneToOneField('Cita', on_delete=models.SET_NULL, null=True, blank=True, related_name='seguimiento_sesion')
+    numero_sesion = models.PositiveIntegerField()
+    fecha_programada = models.DateField()
+    fecha_realizada = models.DateField(null=True, blank=True)
+    estado = models.CharField(max_length=15, choices=(
+        ('pendiente', 'Pendiente'),
+        ('completada', 'Completada'),
+        ('cancelada', 'Cancelada'),
+        ('reprogramada', 'Reprogramada')
+    ), default='pendiente')
+    observaciones = models.TextField(blank=True)
+    evolucion = models.TextField(blank=True, help_text='Evolución del paciente en esta sesión')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Sesión {self.numero_sesion} de {self.tratamiento}"
+    
+    def marcar_completada(self, observaciones=None, evolucion=None):
+        """Marca la sesión como completada y actualiza el tratamiento"""
+        self.estado = 'completada'
+        self.fecha_realizada = timezone.now().date()
+        
+        if observaciones:
+            self.observaciones = observaciones
+        if evolucion:
+            self.evolucion = evolucion
+            
+        self.save()
+        
+        # Actualizar el contador de sesiones completadas en el tratamiento
+        tratamiento = self.tratamiento
+        tratamiento.sesiones_completadas += 1
+        
+        # Si se completaron todas las sesiones, marcar el tratamiento como terminado
+        if tratamiento.sesiones_completadas >= tratamiento.cantidad_sesiones:
+            tratamiento.estado = 'terminado'
+            
+        tratamiento.save()
+    
+    class Meta:
+        verbose_name = 'Seguimiento de Sesión'
+        verbose_name_plural = 'Seguimientos de Sesiones'
+        ordering = ['tratamiento', 'numero_sesion']
+        unique_together = ['tratamiento', 'numero_sesion']
 
 class Cita(models.Model):
     paciente = models.ForeignKey(Paciente, on_delete=models.CASCADE, related_name='citas')
@@ -236,6 +313,50 @@ class Cita(models.Model):
         verbose_name_plural = 'Citas'
         ordering = ['fecha', 'hora_inicio']
 
+
+class DatosAntropometricos(models.Model):
+    paciente = models.ForeignKey(Paciente, on_delete=models.CASCADE, related_name='datos_antropometricos')
+    fecha_registro = models.DateField(auto_now_add=True)
+    peso = models.DecimalField(max_digits=5, decimal_places=2, help_text="Peso en kilogramos")
+    talla = models.DecimalField(max_digits=5, decimal_places=2, help_text="Altura en centímetros")
+    imc = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Índice de Masa Corporal")
+    medico = models.ForeignKey('Medico', on_delete=models.SET_NULL, null=True, blank=True, related_name='datos_registrados')
+    registrado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name='registros_antropometricos')
+    cita = models.ForeignKey(Cita, on_delete=models.SET_NULL, null=True, blank=True, related_name='datos_antropometricos')
+    
+    def save(self, *args, **kwargs):
+        # Calcular IMC automáticamente si no está establecido
+        if self.peso and self.talla and (not self.imc or self.imc == 0):
+            # Convertir talla de cm a metros
+            talla_metros = self.talla / 100
+            self.imc = round(self.peso / (talla_metros * talla_metros), 2)
+        super().save(*args, **kwargs)
+    
+    def get_categoria_imc(self):
+        """Retorna la categoría del IMC según los estándares de la OMS"""
+        if not self.imc:
+            return "No calculado"
+        
+        if self.imc < 18.5:
+            return "Bajo peso"
+        elif self.imc < 25:
+            return "Normal"
+        elif self.imc < 30:
+            return "Sobrepeso"
+        else:
+            return "Obesidad"
+    
+    def __str__(self):
+        return f"Datos de {self.paciente.usuario.get_full_name()} - {self.fecha_registro}"
+    
+    class Meta:
+        verbose_name = 'Datos Antropométricos'
+        verbose_name_plural = 'Datos Antropométricos'
+        ordering = ['-fecha_registro']
+        
+    def __str__(self):
+        return f"Datos de {self.paciente} - {self.fecha_registro.strftime('%d/%m/%Y')}"
+
 class Notificacion(models.Model):
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='notificaciones')
     mensaje = models.TextField()
@@ -243,9 +364,30 @@ class Notificacion(models.Model):
     fecha_envio = models.DateTimeField(auto_now_add=True)
     leido = models.BooleanField(default=False)
     importante = models.BooleanField(default=False)
+    url_redireccion = models.CharField(max_length=255, blank=True, null=True, help_text="URL a la que redirigir al hacer clic en la notificación")
+    objeto_relacionado = models.CharField(max_length=50, blank=True, null=True, help_text="Tipo de objeto relacionado (ej: 'cita', 'derivacion')")
+    objeto_id = models.PositiveIntegerField(blank=True, null=True, help_text="ID del objeto relacionado")
+    fecha_lectura = models.DateTimeField(null=True, blank=True)
     
     def __str__(self):
         return f"Notificación para {self.usuario}: {self.mensaje[:30]}..."
+    
+    def get_icono(self):
+        """Retorna el icono de Font Awesome según el tipo de notificación"""
+        iconos = {
+            'confirmacion': 'check-circle',
+            'recordatorio': 'clock',
+            'cancelacion': 'times-circle',
+            'advertencia': 'exclamation-triangle',
+            'informacion': 'info-circle'
+        }
+        return iconos.get(self.tipo, 'bell')
+    
+    def marcar_como_leida(self):
+        """Marca la notificación como leída y guarda la fecha de lectura"""
+        self.leido = True
+        self.fecha_lectura = timezone.now()
+        self.save()
     
     class Meta:
         verbose_name = 'Notificación'
