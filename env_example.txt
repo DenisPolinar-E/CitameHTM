@@ -1,0 +1,10 @@
+# Configuración de la base de datos PostgreSQL
+DB_NAME=CitaMe
+DB_USER=postgres
+DB_PASSWORD=denis
+DB_HOST=127.0.0.1
+DB_PORT=5432
+
+# Configuración de Django
+SECRET_KEY=django-insecure-4j*!#jd6w_g6&%ii@k2d=4+26&qda*q1q@&df5uji&v@7-_&8i
+DEBUG=True 
