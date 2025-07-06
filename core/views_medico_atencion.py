@@ -6,7 +6,7 @@ from django.http import JsonResponse, HttpResponseRedirect
 from django.db import transaction
 from django.urls import reverse
 from datetime import datetime
-from .models import Cita, HistorialMedico, Derivacion, Especialidad, Notificacion, Medico, DisponibilidadMedica, Consultorio
+from .models import Cita, HistorialMedico, Derivacion, Especialidad, Notificacion, Medico, DisponibilidadMedica, Consultorio, RecetaMedica, DetalleReceta, Medicamento, Usuario
 from .utils_notificaciones import crear_notificacion
 
 @login_required
@@ -72,6 +72,58 @@ def atender_paciente(request, cita_id):
                     tratamiento=tratamiento,
                     observaciones=observaciones
                 )
+                
+                # === PRESCRIPCIÓN DE MEDICAMENTOS ===
+                prescribir_medicamentos = request.POST.get('prescribir_medicamentos') == 'on'
+                if prescribir_medicamentos:
+                    medicamentos_ids = request.POST.getlist('medicamentos')
+                    if medicamentos_ids:
+                        receta = RecetaMedica.objects.create(
+                            cita=cita,
+                            paciente=cita.paciente,
+                            medico=cita.medico,
+                            observaciones_medico=observaciones,
+                            urgente=False
+                        )
+                        for med_id in medicamentos_ids:
+                            try:
+                                medicamento = Medicamento.objects.get(id=med_id)
+                                cantidad = request.POST.get(f'cantidad_{med_id}', 1)
+                                dosis = request.POST.get(f'dosis_{med_id}', '')
+                                frecuencia = request.POST.get(f'frecuencia_{med_id}', '')
+                                duracion = request.POST.get(f'duracion_{med_id}', 7)
+                                instrucciones = request.POST.get(f'instrucciones_{med_id}', '')
+                                DetalleReceta.objects.create(
+                                    receta=receta,
+                                    medicamento=medicamento,
+                                    cantidad_prescrita=int(cantidad),
+                                    dosis=dosis,
+                                    frecuencia=frecuencia,
+                                    duracion_dias=int(duracion),
+                                    instrucciones=instrucciones
+                                )
+                            except (Medicamento.DoesNotExist, ValueError):
+                                continue
+                        # Notificar al paciente
+                        crear_notificacion(
+                            usuario=cita.paciente.usuario,
+                            mensaje=f"Se ha generado una receta médica en tu cita con el Dr. {request.user.nombres} {request.user.apellidos}.",
+                            tipo='informacion',
+                            importante=True,
+                            objeto_relacionado='receta',
+                            objeto_id=receta.id
+                        )
+                        # Notificar a los farmacéuticos
+                        farmaceuticos = Usuario.objects.filter(rol__nombre='Farmacéutico')
+                        for farm in farmaceuticos:
+                            crear_notificacion(
+                                usuario=farm,
+                                mensaje=f"Se ha generado una nueva receta médica para el paciente {cita.paciente.usuario.nombres} {cita.paciente.usuario.apellidos}.",
+                                tipo='informacion',
+                                importante=True,
+                                objeto_relacionado='receta',
+                                objeto_id=receta.id
+                            )
                 
                 # Guardar en la sesión si requiere derivación
                 if requiere_derivacion == 'si':
