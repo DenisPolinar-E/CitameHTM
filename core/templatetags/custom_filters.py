@@ -12,10 +12,10 @@ def divisor(value, arg):
 
 @register.filter
 def multiply(value, arg):
-    """Multiplica el valor por el argumento"""
+    """Multiplica un valor por otro"""
     try:
         return float(value) * float(arg)
-    except ValueError:
+    except (ValueError, TypeError):
         return 0
 
 @register.filter
@@ -27,10 +27,10 @@ def get_item(dictionary, key):
 
 @register.filter
 def subtract(value, arg):
-    """Resta el argumento del valor"""
+    """Resta un valor de otro"""
     try:
         return float(value) - float(arg)
-    except ValueError:
+    except (ValueError, TypeError):
         return 0
 
 @register.filter
@@ -42,9 +42,31 @@ def add(value, arg):
         return 0
 
 @register.filter
-def percentage(value, arg):
-    """Calcula el porcentaje: (value/arg)*100"""
+def percentage(value, total):
+    """Calcula el porcentaje de un valor respecto al total"""
     try:
-        return (float(value) / float(arg)) * 100
-    except (ValueError, ZeroDivisionError):
+        if total == 0:
+            return 0
+        return (float(value) / float(total)) * 100
+    except (ValueError, TypeError):
         return 0
+
+@register.filter
+def stock_class(medicamento):
+    """Devuelve la clase CSS según el nivel de stock"""
+    if medicamento.stock_actual <= medicamento.stock_minimo:
+        return 'bg-danger'
+    elif medicamento.stock_actual <= medicamento.stock_minimo * 2:
+        return 'bg-warning'
+    else:
+        return 'bg-success'
+
+@register.filter
+def stock_status(medicamento):
+    """Devuelve el estado textual del stock"""
+    if medicamento.stock_actual <= medicamento.stock_minimo:
+        return 'Crítico'
+    elif medicamento.stock_actual <= medicamento.stock_minimo * 2:
+        return 'Bajo'
+    else:
+        return 'Normal'

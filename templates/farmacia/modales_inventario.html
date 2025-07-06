@@ -1,0 +1,86 @@
+<!-- Modal para entrada rápida -->
+<div class="modal fade" id="modalEntrada" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Entrada Rápida</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'entrada_medicamentos' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" name="medicamento_id" id="entrada_medicamento_id">
+                    <div class="mb-3">
+                        <label class="form-label">Medicamento</label>
+                        <input type="text" class="form-control" id="entrada_medicamento_nombre" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Cantidad</label>
+                        <input type="number" class="form-control" name="cantidad" min="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Lote</label>
+                        <input type="text" class="form-control" name="lote">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Proveedor</label>
+                        <input type="text" class="form-control" name="proveedor">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Motivo</label>
+                        <input type="text" class="form-control" name="motivo" value="Entrada rápida desde inventario">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Registrar Entrada</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para ajuste rápido -->
+<div class="modal fade" id="modalAjuste" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ajuste Rápido</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'ajuste_inventario' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" name="medicamento_id" id="ajuste_medicamento_id">
+                    <div class="mb-3">
+                        <label class="form-label">Medicamento</label>
+                        <input type="text" class="form-control" id="ajuste_medicamento_nombre" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Stock Actual</label>
+                        <input type="text" class="form-control" id="ajuste_stock_actual" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de Ajuste</label>
+                        <select class="form-select" name="tipo_ajuste" required>
+                            <option value="positivo">Ajuste Positivo (+)</option>
+                            <option value="negativo">Ajuste Negativo (-)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Cantidad</label>
+                        <input type="number" class="form-control" name="cantidad" min="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Motivo</label>
+                        <input type="text" class="form-control" name="motivo" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Realizar Ajuste</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div> 

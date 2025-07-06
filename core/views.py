@@ -40,6 +40,8 @@ def login_view(request):
                     return redirect('dashboard_admision')
                 elif user.rol.nombre == 'Administrador':
                     return redirect('dashboard_admin')
+                elif user.rol.nombre == 'Farmacéutico':
+                    return redirect('dashboard_farmacia')
             
             # Si no tiene rol asignado, redirigir a la pÃ¡gina principal
             return redirect('home')
@@ -129,6 +131,8 @@ def dashboard_view(request):
             return redirect('dashboard_admision')
         elif request.user.rol.nombre == 'Administrador':
             return redirect('dashboard_admin')
+        elif request.user.rol.nombre == 'Farmacéutico':
+            return redirect('dashboard_farmacia')
     
     # Si no tiene rol asignado, mostrar mensaje y redirigir a home
     messages.warning(request, 'No tienes un rol asignado en el sistema.')

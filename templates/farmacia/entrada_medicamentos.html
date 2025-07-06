@@ -1,0 +1,247 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Entrada de Medicamentos - CitaMe{% endblock %}
+
+{% block page_title %}Entrada de Medicamentos{% endblock %}
+
+{% block sidebar_menu %}
+<a href="{% url 'dashboard_farmacia' %}" class="menu-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="{% url 'recetas_pendientes' %}" class="menu-item"><i class="fas fa-prescription"></i> Recetas Pendientes</a>
+
+<!-- Menú expandible de Inventario -->
+<div class="menu-item dropdown-menu-item">
+    <a href="#" class="menu-item-toggle active"><i class="fas fa-boxes"></i> Inventario <i class="fas fa-chevron-down"></i></a>
+    <div class="submenu active">
+        <a href="{% url 'inventario_medicamentos' %}" class="submenu-item"><i class="fas fa-pills"></i> Ver Inventario</a>
+        <a href="{% url 'entrada_medicamentos' %}" class="submenu-item active"><i class="fas fa-plus-circle"></i> Entrada de Medicamentos</a>
+        <a href="{% url 'ajuste_inventario' %}" class="submenu-item"><i class="fas fa-adjust"></i> Ajuste de Stock</a>
+        <a href="{% url 'historial_movimientos' %}" class="submenu-item"><i class="fas fa-history"></i> Historial de Movimientos</a>
+        <a href="{% url 'reporte_inventario' %}" class="submenu-item"><i class="fas fa-chart-bar"></i> Reporte de Inventario</a>
+    </div>
+</div>
+
+<a href="{% url 'alertas_farmacia' %}" class="menu-item"><i class="fas fa-exclamation-triangle"></i> Alertas</a>
+<a href="{% url 'perfil_admin' %}" class="menu-item"><i class="fas fa-user"></i> Mi Perfil</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-control, .form-select {
+        border-radius: 10px;
+        border: 1px solid #e3e6f0;
+        padding: 0.75rem 1rem;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    .btn-custom {
+        border-radius: 25px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+
+    .btn-primary-custom {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+    }
+
+    .btn-primary-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .header-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .required {
+        color: #e74c3c;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .alert {
+        border-radius: 10px;
+        border: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="header-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="mb-0">Registra nuevas entradas al inventario</p>
+                    </div>
+                    <a href="{% url 'inventario_medicamentos' %}" class="btn btn-light btn-custom">
+                        <i class="fas fa-arrow-left"></i> Volver al Inventario
+                    </a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body p-4">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="medicamento_id" class="form-label">
+                                        Medicamento <span class="required">*</span>
+                                    </label>
+                                    <select class="form-select" name="medicamento_id" id="medicamento_id" required>
+                                        <option value="">Seleccionar medicamento...</option>
+                                        {% for medicamento in medicamentos %}
+                                            <option value="{{ medicamento.id }}" 
+                                                    data-stock="{{ medicamento.stock_actual }}"
+                                                    data-precio="{{ medicamento.precio_unitario }}">
+                                                {{ medicamento.nombre_comercial }} - {{ medicamento.codigo }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="cantidad" class="form-label">
+                                        Cantidad <span class="required">*</span>
+                                    </label>
+                                    <input type="number" class="form-control" name="cantidad" id="cantidad" 
+                                           min="1" required placeholder="Ingresa la cantidad">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="lote" class="form-label">Lote</label>
+                                    <input type="text" class="form-control" name="lote" id="lote" 
+                                           placeholder="Número de lote">
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="proveedor" class="form-label">Proveedor</label>
+                                    <input type="text" class="form-control" name="proveedor" id="proveedor" 
+                                           placeholder="Nombre del proveedor">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="precio_unitario" class="form-label">Precio Unitario (S/.)</label>
+                                    <input type="number" class="form-control" name="precio_unitario" id="precio_unitario" 
+                                           step="0.01" min="0" placeholder="0.00">
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="numero_factura" class="form-label">Número de Factura</label>
+                                    <input type="text" class="form-control" name="numero_factura" id="numero_factura" 
+                                           placeholder="Número de factura o documento">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="fecha_vencimiento" class="form-label">Fecha de Vencimiento</label>
+                                    <input type="date" class="form-control" name="fecha_vencimiento" id="fecha_vencimiento">
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="motivo" class="form-label">Motivo</label>
+                                    <input type="text" class="form-control" name="motivo" id="motivo" 
+                                           value="Compra de medicamentos" placeholder="Motivo de la entrada">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Información del medicamento seleccionado -->
+                        <div id="medicamento-info" class="alert alert-info" style="display: none;">
+                            <h6><i class="fas fa-info-circle"></i> Información del Medicamento</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Stock Actual:</strong> <span id="stock-actual">-</span> unidades</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Precio Actual:</strong> S/. <span id="precio-actual">-</span></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary-custom btn-lg">
+                                <i class="fas fa-save"></i> Registrar Entrada
+                            </button>
+                            <a href="{% url 'inventario_medicamentos' %}" class="btn btn-secondary btn-lg ms-3">
+                                <i class="fas fa-times"></i> Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const medicamentoSelect = document.getElementById('medicamento_id');
+    const medicamentoInfo = document.getElementById('medicamento-info');
+    const stockActual = document.getElementById('stock-actual');
+    const precioActual = document.getElementById('precio-actual');
+    const precioUnitario = document.getElementById('precio_unitario');
+    
+    medicamentoSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        
+        if (selectedOption.value) {
+            const stock = selectedOption.getAttribute('data-stock');
+            const precio = selectedOption.getAttribute('data-precio');
+            
+            stockActual.textContent = stock;
+            precioActual.textContent = precio;
+            precioUnitario.value = precio;
+            
+            medicamentoInfo.style.display = 'block';
+        } else {
+            medicamentoInfo.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,396 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Dashboard Farmacia - CitaMe{% endblock %}
+
+{% block page_title %}Dashboard de Farmacia{% endblock %}
+
+{% block sidebar_menu %}
+<a href="{% url 'dashboard_farmacia' %}" class="menu-item active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="{% url 'recetas_pendientes' %}" class="menu-item"><i class="fas fa-prescription"></i> Recetas Pendientes</a>
+
+<!-- Menú expandible de Inventario -->
+<div class="menu-item dropdown-menu-item">
+    <a href="#" class="menu-item-toggle"><i class="fas fa-boxes"></i> Inventario <i class="fas fa-chevron-down"></i></a>
+    <div class="submenu">
+        <a href="{% url 'inventario_medicamentos' %}" class="submenu-item"><i class="fas fa-pills"></i> Ver Inventario</a>
+        <a href="{% url 'entrada_medicamentos' %}" class="submenu-item"><i class="fas fa-plus-circle"></i> Entrada de Medicamentos</a>
+        <a href="{% url 'ajuste_inventario' %}" class="submenu-item"><i class="fas fa-adjust"></i> Ajuste de Stock</a>
+        <a href="{% url 'historial_movimientos' %}" class="submenu-item"><i class="fas fa-history"></i> Historial de Movimientos</a>
+        <a href="{% url 'reporte_inventario' %}" class="submenu-item"><i class="fas fa-chart-bar"></i> Reporte de Inventario</a>
+    </div>
+</div>
+
+<a href="{% url 'alertas_farmacia' %}" class="menu-item"><i class="fas fa-exclamation-triangle"></i> Alertas</a>
+<a href="{% url 'perfil_admin' %}" class="menu-item"><i class="fas fa-user"></i> Mi Perfil</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+    }
+    
+    .stat-card.success {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    
+    .stat-card.warning {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    }
+    
+    .stat-card.danger {
+        background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%);
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        margin-bottom: 0;
+    }
+    
+    .receta-card {
+        border-left: 4px solid #007bff;
+        transition: all 0.3s ease;
+    }
+    
+    .receta-card:hover {
+        border-left-color: #28a745;
+        background-color: #f8f9fa;
+    }
+    
+    .urgente {
+        border-left-color: #dc3545 !important;
+    }
+    
+    .medicamento-item {
+        padding: 10px;
+        border-radius: 8px;
+        background: #f8f9fa;
+        margin-bottom: 8px;
+        border-left: 3px solid #007bff;
+    }
+    
+    /* Estilos para menú expandible */
+    .dropdown-menu-item {
+        position: relative;
+    }
+    
+    .menu-item-toggle {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 20px;
+        color: #fff;
+        text-decoration: none;
+        border-radius: 8px;
+        margin-bottom: 5px;
+        transition: all 0.3s ease;
+    }
+    
+    .menu-item-toggle:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        text-decoration: none;
+    }
+    
+    .submenu {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        margin-bottom: 5px;
+    }
+    
+    .submenu.active {
+        max-height: 300px;
+    }
+    
+    .submenu-item {
+        display: block;
+        padding: 10px 20px 10px 40px;
+        color: #fff;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        border-radius: 6px;
+        margin: 3px 10px;
+    }
+    
+    .submenu-item:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        text-decoration: none;
+        transform: translateX(5px);
+    }
+    
+    .submenu-item i {
+        width: 20px;
+        text-align: center;
+        margin-right: 8px;
+    }
+    
+    .menu-item-toggle i.fa-chevron-down {
+        transition: transform 0.3s ease;
+    }
+    
+    .menu-item-toggle.active i.fa-chevron-down {
+        transform: rotate(180deg);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Tarjetas de estadísticas -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-prescription fa-2x mb-3"></i>
+                    <h2 class="stat-number">{{ recetas_pendientes }}</h2>
+                    <p class="stat-label">Recetas Pendientes</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card success h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-circle fa-2x mb-3"></i>
+                    <h2 class="stat-number">{{ recetas_dispensadas_hoy }}</h2>
+                    <p class="stat-label">Dispensadas Hoy</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card warning h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                    <h2 class="stat-number">{{ medicamentos_stock_critico }}</h2>
+                    <p class="stat-label">Stock Crítico</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card danger h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-clock fa-2x mb-3"></i>
+                    <h2 class="stat-number">{{ medicamentos_proximos_vencer }}</h2>
+                    <p class="stat-label">Próximos a Vencer</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Recetas pendientes recientes -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-prescription me-2"></i>
+                        Recetas Pendientes Recientes
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if recetas_recientes %}
+                        {% for receta in recetas_recientes %}
+                        <div class="receta-card card mb-3 {% if receta.urgente %}urgente{% endif %}">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-6">
+                                        <h6 class="mb-1">
+                                            <strong>{{ receta.codigo_receta }}</strong>
+                                            {% if receta.urgente %}
+                                                <span class="badge bg-danger ms-2">URGENTE</span>
+                                            {% endif %}
+                                        </h6>
+                                        <p class="mb-1">
+                                            <strong>Paciente:</strong> 
+                                            {{ receta.paciente.usuario.nombres }} {{ receta.paciente.usuario.apellidos }}
+                                        </p>
+                                        <p class="mb-0">
+                                            <strong>Médico:</strong> 
+                                            Dr. {{ receta.medico.usuario.nombres }} {{ receta.medico.usuario.apellidos }}
+                                        </p>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">
+                                            {{ receta.fecha_prescripcion|date:"d/m/Y H:i" }}
+                                        </small>
+                                        <p class="mb-0">
+                                            <strong>{{ receta.total_medicamentos }}</strong> medicamento(s)
+                                        </p>
+                                    </div>
+                                    <div class="col-md-3 text-end">
+                                        <a href="{% url 'detalle_receta' receta.id %}" class="btn btn-sm btn-outline-primary me-2">
+                                            <i class="fas fa-eye"></i> Ver
+                                        </a>
+                                        <a href="{% url 'dispensar_receta' receta.id %}" class="btn btn-sm btn-success">
+                                            <i class="fas fa-check"></i> Dispensar
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        
+                        <div class="text-center mt-3">
+                            <a href="{% url 'recetas_pendientes' %}" class="btn btn-primary">
+                                <i class="fas fa-list me-2"></i>Ver Todas las Recetas
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                            <h5>¡Excelente!</h5>
+                            <p class="text-muted">No hay recetas pendientes por dispensar.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Medicamentos más solicitados -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>
+                        Medicamentos Más Solicitados
+                    </h5>
+                    <small class="text-muted">Últimos 30 días</small>
+                </div>
+                <div class="card-body">
+                    {% if medicamentos_populares %}
+                        {% for medicamento in medicamentos_populares %}
+                        <div class="medicamento-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ medicamento.medicamento__nombre_comercial }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ medicamento.medicamento__nombre_generico }}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-primary">{{ medicamento.total_prescrito }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-pills fa-2x text-muted mb-2"></i>
+                            <p class="text-muted">No hay datos de medicamentos solicitados.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Alertas rápidas -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bell me-2"></i>
+                        Alertas Rápidas
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if medicamentos_stock_critico > 0 %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>{{ medicamentos_stock_critico }}</strong> medicamento(s) con stock crítico
+                    </div>
+                    {% endif %}
+                    
+                    {% if medicamentos_proximos_vencer > 0 %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-clock me-2"></i>
+                        <strong>{{ medicamentos_proximos_vencer }}</strong> medicamento(s) próximos a vencer
+                    </div>
+                    {% endif %}
+                    
+                    {% if medicamentos_stock_critico == 0 and medicamentos_proximos_vencer == 0 %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Todo en orden. No hay alertas pendientes.
+                    </div>
+                    {% endif %}
+                    
+                    <div class="text-center mt-3">
+                        <a href="{% url 'alertas_farmacia' %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-search me-2"></i>Ver Todas las Alertas
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-refrescar estadísticas cada 5 minutos
+    setInterval(function() {
+        location.reload();
+    }, 300000); // 5 minutos
+    
+    // Animación de números
+    function animateValue(obj, start, end, duration) {
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            obj.innerHTML = Math.floor(progress * (end - start) + start);
+            if (progress < 1) {
+                window.requestAnimationFrame(step);
+            }
+        };
+        window.requestAnimationFrame(step);
+    }
+    
+    // Animar estadísticas al cargar
+    const statNumbers = document.querySelectorAll('.stat-number');
+    statNumbers.forEach(stat => {
+        const endValue = parseInt(stat.innerHTML);
+        stat.innerHTML = '0';
+        animateValue(stat, 0, endValue, 1000);
+    });
+    
+    // Menú expandible
+    const menuToggle = document.querySelector('.menu-item-toggle');
+    const submenu = document.querySelector('.submenu');
+    
+    if (menuToggle && submenu) {
+        menuToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Toggle active class
+            menuToggle.classList.toggle('active');
+            submenu.classList.toggle('active');
+        });
+    }
+});
+</script>
+{% endblock %} 
