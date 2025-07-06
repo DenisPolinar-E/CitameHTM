@@ -1,4 +1,3 @@
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
@@ -603,7 +602,21 @@ def api_dashboard(request):
                 'nombre': 'Notificaciones',
                 'icono': 'fa-bell',
                 'ruta': '/admin/notificaciones/'
-            }
+            },
+            {
+                'nombre': 'Reportes de farmacia',
+                'icono': 'fa-prescription-bottle-medical',
+                'ruta': '#',
+                'es_desplegable': True,
+                'id': 'reportesFarmaciaDropdown',
+                'submenus': [
+                    {
+                        'nombre': 'Consumo de Medicamentos',
+                        'icono': 'fa-pills',
+                        'ruta': '/administrador/reportes-farmacia/consumo-medicamentos/'
+                    }
+                ]
+            },
         ]
     
     # Incluir menú en la respuesta para todos los roles
@@ -922,7 +935,21 @@ def tendencias_citas(request):
                 'nombre': 'Notificaciones',
                 'icono': 'fa-bell',
                 'ruta': '/admin/notificaciones/'
-            }
+            },
+            {
+                'nombre': 'Reportes de farmacia',
+                'icono': 'fa-prescription-bottle-medical',
+                'ruta': '#',
+                'es_desplegable': True,
+                'id': 'reportesFarmaciaDropdown',
+                'submenus': [
+                    {
+                        'nombre': 'Consumo de Medicamentos',
+                        'icono': 'fa-pills',
+                        'ruta': '/administrador/reportes-farmacia/consumo-medicamentos/'
+                    }
+                ]
+            },
         ]
         
     # Incluir menú en la respuesta para todos los roles
