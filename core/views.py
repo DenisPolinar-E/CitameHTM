@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 from django.db.models import Sum
 from core.models import DetalleReceta, Medicamento
 from django.contrib.auth.models import Group
+from core.models import Especialidad
 
 # Vistas pÃºblicas
 def home(request):
@@ -617,6 +618,21 @@ def api_dashboard(request):
                         'nombre': 'Consumo de Medicamentos',
                         'icono': 'fa-pills',
                         'ruta': '/administrador/reportes-farmacia/consumo-medicamentos/'
+                    },
+                    {
+                        'nombre': 'Stock críticos y Alertas',
+                        'icono': 'fa-triangle-exclamation',
+                        'ruta': '/administrador/reportes-farmacia/stock-critico/'
+                    },
+                    {
+                        'nombre': 'Dispensación por Especialidad',
+                        'icono': 'fa-notes-medical',
+                        'ruta': '/administrador/reportes-farmacia/dispensacion-especialidad/'
+                    },
+                    {
+                        'nombre': 'T. Consumo de medicamentos',
+                        'icono': 'fa-chart-line',
+                        'ruta': '/administrador/reportes-farmacia/tendencias-consumo/'
                     }
                 ]
             },
@@ -950,6 +966,21 @@ def tendencias_citas(request):
                         'nombre': 'Consumo de Medicamentos',
                         'icono': 'fa-pills',
                         'ruta': '/administrador/reportes-farmacia/consumo-medicamentos/'
+                    },
+                    {
+                        'nombre': 'Stock críticos y Alertas',
+                        'icono': 'fa-triangle-exclamation',
+                        'ruta': '/administrador/reportes-farmacia/stock-critico/'
+                    },
+                    {
+                        'nombre': 'Dispensación por Especialidad',
+                        'icono': 'fa-notes-medical',
+                        'ruta': '/administrador/reportes-farmacia/dispensacion-especialidad/'
+                    },
+                    {
+                        'nombre': 'T. Consumo de medicamentos',
+                        'icono': 'fa-chart-line',
+                        'ruta': '/administrador/reportes-farmacia/tendencias-consumo/'
                     }
                 ]
             },
@@ -1751,4 +1782,126 @@ def admin_reporte_consumo_medicamentos(request):
 
 def user_is_admin(user):
     return user.is_superuser or (hasattr(user, 'rol') and user.rol and user.rol.nombre == 'Administrador')
+
+def admin_reporte_stock_critico(request):
+    if not request.user.is_authenticated or not user_is_admin(request.user):
+        return render(request, '403.html')
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('ajax'):
+        hoy = timezone.now().date()
+        proximos_vencer = Medicamento.objects.filter(fecha_vencimiento__lte=hoy+timedelta(days=30), activo=True)
+        stock_critico = Medicamento.objects.filter(stock_actual__lte=models.F('stock_minimo'), activo=True)
+        # Para la gráfica: nombre y cantidad en riesgo (stock crítico o próximos a vencer)
+        en_riesgo = Medicamento.objects.filter(activo=True).filter(models.Q(stock_actual__lte=models.F('stock_minimo')) | models.Q(fecha_vencimiento__lte=hoy+timedelta(days=30)))
+        labels = [m.nombre_comercial for m in en_riesgo]
+        data = [m.stock_actual for m in en_riesgo]
+        return JsonResponse({
+            'stock_critico': list(stock_critico.values('nombre_comercial', 'stock_actual', 'stock_minimo', 'fecha_vencimiento')),
+            'proximos_vencer': list(proximos_vencer.values('nombre_comercial', 'fecha_vencimiento', 'stock_actual')),
+            'grafico': {'labels': labels, 'data': data}
+        })
+    return render(request, 'admin/reportes_farmacia_stock_critico.html', {})
+
+def admin_reporte_dispensacion_especialidad(request):
+    if not request.user.is_authenticated or not user_is_admin(request.user):
+        return render(request, '403.html')
+    from datetime import datetime
+    from django.db.models import Sum
+    filtro = request.GET.get('filtro', 'mes')
+    periodo = request.GET.get('periodo')
+    qs = DetalleReceta.objects.select_related('receta__medico__especialidad')
+    if filtro == 'mes' and periodo:
+        anio, mes = map(int, periodo.split('-'))
+        qs = qs.filter(receta__fecha_prescripcion__year=anio, receta__fecha_prescripcion__month=mes)
+    elif filtro == 'trimestre' and periodo:
+        anio, trimestre = map(int, periodo.split('-'))
+        meses = [(1,3), (4,6), (7,9), (10,12)][int(trimestre)-1]
+        qs = qs.filter(receta__fecha_prescripcion__year=anio, receta__fecha_prescripcion__month__gte=meses[0], receta__fecha_prescripcion__month__lte=meses[1])
+    elif filtro == 'anio' and periodo:
+        anio = int(periodo)
+        qs = qs.filter(receta__fecha_prescripcion__year=anio)
+    # Agrupar por especialidad y sumar cantidad dispensada
+    datos = (qs.values('receta__medico__especialidad__nombre')
+               .annotate(total=Sum('cantidad_dispensada'))
+               .order_by('-total'))
+    labels = [x['receta__medico__especialidad__nombre'] or 'Sin especialidad' for x in datos]
+    data = [x['total'] for x in datos]
+    tabla = list(datos)
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('ajax'):
+        return JsonResponse({'labels': labels, 'data': data, 'tabla': tabla})
+    from django.utils import timezone
+    return render(request, 'admin/reportes_farmacia_dispensacion_especialidad.html', {'now': timezone.now()})
+
+def admin_reporte_tendencias_consumo(request):
+    if not request.user.is_authenticated or not user_is_admin(request.user):
+        return render(request, '403.html')
+    from datetime import datetime
+    from django.db.models import Sum
+    filtro = request.GET.get('filtro', 'mes')
+    periodo = request.GET.get('periodo')
+    qs = DetalleReceta.objects.select_related('receta', 'medicamento')
+    # Determinar periodo de agrupación
+    if filtro == 'mes' and periodo:
+        anio, mes = map(int, periodo.split('-'))
+        qs = qs.filter(receta__fecha_prescripcion__year=anio)
+        periodos = [f'{anio}-{str(m).zfill(2)}' for m in range(1, 13)]
+        periodo_label = 'Mes'
+        group_by = 'receta__fecha_prescripcion__month'
+    elif filtro == 'trimestre' and periodo:
+        anio = int(periodo)
+        qs = qs.filter(receta__fecha_prescripcion__year=anio)
+        periodos = [f'T{t}-{anio}' for t in range(1, 5)]
+        periodo_label = 'Trimestre'
+        group_by = 'receta__fecha_prescripcion__quarter'
+    elif filtro == 'anio' and periodo:
+        anios = list(range(int(periodo)-4, int(periodo)+1))
+        qs = qs.filter(receta__fecha_prescripcion__year__in=anios)
+        periodos = [str(a) for a in anios]
+        periodo_label = 'Año'
+        group_by = 'receta__fecha_prescripcion__year'
+    else:
+        # Por defecto, últimos 5 años
+        from django.utils import timezone
+        anio_actual = timezone.now().year
+        anios = list(range(anio_actual-4, anio_actual+1))
+        qs = qs.filter(receta__fecha_prescripcion__year__in=anios)
+        periodos = [str(a) for a in anios]
+        periodo_label = 'Año'
+        group_by = 'receta__fecha_prescripcion__year'
+    # Top medicamentos más dispensados en el periodo
+    top_meds = (qs.values('medicamento__nombre_comercial')
+                  .annotate(total=Sum('cantidad_dispensada'))
+                  .order_by('-total')[:7])
+    meds = [x['medicamento__nombre_comercial'] for x in top_meds]
+    # Evolución por medicamento y periodo
+    data = {med: [0]*len(periodos) for med in meds}
+    tabla = {med: [0]*len(periodos) for med in meds}
+    for i, p in enumerate(periodos):
+        if filtro == 'mes':
+            try:
+                m = int(p.split('-')[1])
+            except (IndexError, ValueError):
+                continue
+            subqs = qs.filter(medicamento__nombre_comercial__in=meds, receta__fecha_prescripcion__month=m)
+        elif filtro == 'trimestre':
+            try:
+                t = int(p[1])
+            except (IndexError, ValueError):
+                continue
+            meses = [(1,3), (4,6), (7,9), (10,12)][t-1]
+            subqs = qs.filter(medicamento__nombre_comercial__in=meds, receta__fecha_prescripcion__month__gte=meses[0], receta__fecha_prescripcion__month__lte=meses[1])
+        else:  # año
+            try:
+                y = int(p)
+            except ValueError:
+                continue
+            subqs = qs.filter(medicamento__nombre_comercial__in=meds, receta__fecha_prescripcion__year=y)
+        subdata = (subqs.values('medicamento__nombre_comercial')
+                        .annotate(total=Sum('cantidad_dispensada')))
+        for row in subdata:
+            data[row['medicamento__nombre_comercial']][i] = row['total']
+            tabla[row['medicamento__nombre_comercial']][i] = row['total']
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('ajax'):
+        return JsonResponse({'meds': meds, 'periodos': periodos, 'data': data, 'tabla': tabla, 'periodo_label': periodo_label})
+    from django.utils import timezone
+    return render(request, 'admin/reportes_farmacia_tendencias_consumo.html', {'now': timezone.now()})
 

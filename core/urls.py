@@ -193,5 +193,8 @@ urlpatterns = [
     # path('api/derivaciones/estadisticas/', api_views.api_derivaciones, name='api_derivaciones'),
     # path('api/citas/distribucion/', api_views.api_distribucion_citas, name='api_distribucion_citas'),
     # path('api/asistencia/tasas/', api_views.api_tasas_asistencia, name='api_tasas_asistencia'),
-    path('administrador/reportes-farmacia/consumo-medicamentos/', views.admin_reporte_consumo_medicamentos, name='admin_reporte_consumo_medicamentos')
+    path('administrador/reportes-farmacia/consumo-medicamentos/', views.admin_reporte_consumo_medicamentos, name='admin_reporte_consumo_medicamentos'),
+    path('administrador/reportes-farmacia/stock-critico/', views.admin_reporte_stock_critico, name='admin_reporte_stock_critico'),
+    path('administrador/reportes-farmacia/dispensacion-especialidad/', views.admin_reporte_dispensacion_especialidad, name='admin_reporte_dispensacion_especialidad'),
+    path('administrador/reportes-farmacia/tendencias-consumo/', views.admin_reporte_tendencias_consumo, name='admin_reporte_tendencias_consumo')
 ]
