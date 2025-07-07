@@ -12,6 +12,7 @@ from . import views_admision
 from . import views_reportes
 from . import views_agenda
 from . import views_seguimiento
+from . import views_farmacia
 from . import views_tendencias
 from . import api_views
 from . import api_views_pacientes
@@ -106,6 +107,9 @@ urlpatterns = [
     # APIs para derivación médica
     path('api/derivacion/medicos-por-especialidad/<int:especialidad_id>/', api_views.medicos_por_especialidad, name='api_derivacion_medicos_por_especialidad'),
     
+    # API para pacientes - médicos por especialidad
+    path('api/medicos-por-especialidad/<int:especialidad_id>/', views_paciente.api_medicos_por_especialidad, name='api_pacientes_medicos_por_especialidad'),
+    
     # APIs para notificaciones
     path('api/marcar-notificaciones-leidas/', api_views_notificaciones.marcar_notificaciones_leidas, name='marcar_notificaciones_leidas'),
     path('api/marcar-notificacion-leida/<int:notificacion_id>/', api_views_notificaciones.marcar_notificacion_leida, name='marcar_notificacion_leida'),
@@ -122,12 +126,31 @@ urlpatterns = [
     path('seguimientos/programar/', views_seguimiento.programar_seguimientos, name='programar_seguimientos'),
     path('seguimientos/detalle/<int:tratamiento_id>/', views_seguimiento.detalle_seguimiento, name='detalle_seguimiento'),
     path('seguimientos/programar-cita/<int:sesion_id>/', views_seguimiento.programar_cita_sesion, name='programar_cita_sesion'),
+    path('seguimientos/atender-sesion/<int:sesion_id>/', views_seguimiento.atender_sesion_seguimiento, name='atender_sesion_seguimiento'),
     path('seguimientos/registrar-evolucion/<int:sesion_id>/', views_seguimiento.registrar_evolucion, name='registrar_evolucion'),
     path('seguimientos/cancelar/<int:tratamiento_id>/', views_seguimiento.cancelar_tratamiento, name='cancelar_tratamiento'),
     path('mis-tratamientos/', views_seguimiento.mis_tratamientos, name='mis_tratamientos'),
     
     # APIs para seguimiento
     path('api/sesiones-pendientes/', views_seguimiento.api_sesiones_pendientes, name='api_sesiones_pendientes'),
+    path('api/buscar-medicamentos-prescripcion/', views_seguimiento.api_buscar_medicamentos_prescripcion, name='api_buscar_medicamentos_prescripcion'),
+    
+    # === FARMACIA ===
+    path('farmacia/', views_farmacia.dashboard_farmacia, name='dashboard_farmacia'),
+    path('farmacia/recetas/', views_farmacia.recetas_pendientes, name='recetas_pendientes'),
+    path('farmacia/receta/<int:receta_id>/', views_farmacia.detalle_receta, name='detalle_receta'),
+    path('farmacia/dispensar/<int:receta_id>/', views_farmacia.dispensar_receta, name='dispensar_receta'),
+    path('farmacia/inventario/', views_farmacia.inventario_medicamentos, name='inventario_medicamentos'),
+    path('farmacia/inventario/entrada/', views_farmacia.entrada_medicamentos, name='entrada_medicamentos'),
+    path('farmacia/inventario/ajuste/', views_farmacia.ajuste_inventario, name='ajuste_inventario'),
+    path('farmacia/inventario/historial/', views_farmacia.historial_movimientos, name='historial_movimientos'),
+    path('farmacia/inventario/medicamento/<int:medicamento_id>/', views_farmacia.detalle_medicamento_inventario, name='detalle_medicamento_inventario'),
+    path('farmacia/inventario/reporte/', views_farmacia.reporte_inventario, name='reporte_inventario'),
+    path('farmacia/alertas/', views_farmacia.alertas_farmacia, name='alertas_farmacia'),
+    
+    # APIs para farmacia
+    path('api/farmacia/buscar-medicamento/', views_farmacia.api_buscar_medicamento, name='api_buscar_medicamento'),
+    path('api/farmacia/estadisticas/', views_farmacia.api_estadisticas_farmacia, name='api_estadisticas_farmacia'),
     
     # Reportes y análisis estadísticos
     # Análisis Temporal
@@ -169,5 +192,9 @@ urlpatterns = [
     # Las siguientes líneas fueron comentadas porque los métodos no existen
     # path('api/derivaciones/estadisticas/', api_views.api_derivaciones, name='api_derivaciones'),
     # path('api/citas/distribucion/', api_views.api_distribucion_citas, name='api_distribucion_citas'),
-    # path('api/asistencia/tasas/', api_views.api_tasas_asistencia, name='api_tasas_asistencia')
+    # path('api/asistencia/tasas/', api_views.api_tasas_asistencia, name='api_tasas_asistencia'),
+    path('administrador/reportes-farmacia/consumo-medicamentos/', views.admin_reporte_consumo_medicamentos, name='admin_reporte_consumo_medicamentos'),
+    path('administrador/reportes-farmacia/stock-critico/', views.admin_reporte_stock_critico, name='admin_reporte_stock_critico'),
+    path('administrador/reportes-farmacia/dispensacion-especialidad/', views.admin_reporte_dispensacion_especialidad, name='admin_reporte_dispensacion_especialidad'),
+    path('administrador/reportes-farmacia/tendencias-consumo/', views.admin_reporte_tendencias_consumo, name='admin_reporte_tendencias_consumo')
 ]

@@ -1,0 +1,1093 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block title %}Atender Sesión de Seguimiento{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-stethoscope me-2"></i>
+                        Atender Sesión de Seguimiento
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Información del Tratamiento -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fas fa-clipboard-list me-2"></i>
+                                        Información del Tratamiento
+                                    </h5>
+                                    <p><strong>Diagnóstico:</strong> {{ tratamiento.diagnostico }}</p>
+                                    <p><strong>Fecha Inicio:</strong> {{ tratamiento.fecha_inicio|date:"d/m/Y" }}</p>
+                                    <p><strong>Total Sesiones:</strong> {{ tratamiento.sesiones_programadas }}</p>
+                                    <p><strong>Sesión Actual:</strong> {{ sesion.numero_sesion }}/{{ tratamiento.sesiones_programadas }}</p>
+                                    <p><strong>Estado:</strong> 
+                                        <span class="badge bg-info">{{ tratamiento.estado|title }}</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fas fa-user-injured me-2"></i>
+                                        Información del Paciente
+                                    </h5>
+                                    <p><strong>Nombre:</strong> {{ paciente.usuario.nombres }} {{ paciente.usuario.apellidos }}</p>
+                                    <p><strong>DNI:</strong> {{ paciente.usuario.dni }}</p>
+                                    <p><strong>Teléfono:</strong> {{ paciente.usuario.telefono }}</p>
+                                    <p><strong>Edad:</strong> {{ paciente.usuario.edad }} años</p>
+                                    <p><strong>Sexo:</strong> {{ paciente.usuario.sexo }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Información de la Cita -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card bg-warning bg-opacity-10">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fas fa-calendar-check me-2"></i>
+                                        Información de la Cita
+                                    </h5>
+                                    <div class="row">
+                                        <div class="col-md-3">
+                                            <strong>Fecha:</strong> {{ cita.fecha|date:"d/m/Y" }}
+                                        </div>
+                                        <div class="col-md-3">
+                                            <strong>Hora:</strong> {{ cita.hora|time:"H:i" }}
+                                        </div>
+                                        <div class="col-md-3">
+                                            <strong>Consultorio:</strong> {{ cita.consultorio }}
+                                        </div>
+                                        <div class="col-md-3">
+                                            <strong>Estado:</strong> 
+                                            <span class="badge bg-primary">{{ cita.estado|title }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Evoluciones Anteriores -->
+                    {% if evoluciones_anteriores %}
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-history me-2"></i>
+                                        Evoluciones Anteriores
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    {% for evolucion in evoluciones_anteriores %}
+                                    <div class="border rounded p-3 mb-3">
+                                        <div class="row">
+                                            <div class="col-md-2">
+                                                <strong>Sesión {{ evolucion.numero_sesion }}</strong>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <small class="text-muted">
+                                                    {{ evolucion.fecha_completada|date:"d/m/Y H:i" }}
+                                                </small>
+                                            </div>
+                                            <div class="col-md-7">
+                                                <p class="mb-0">
+                                                    <strong>Evolución:</strong> {{ evolucion.evolucion }}
+                                                </p>
+                                                {% if evolucion.observaciones %}
+                                                <p class="mb-0">
+                                                    <strong>Observaciones:</strong> {{ evolucion.observaciones }}
+                                                </p>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Formulario de Atención -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card border-success">
+                                <div class="card-header bg-success text-white">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-file-medical me-2"></i>
+                                        Registrar Evolución de la Sesión {{ sesion.numero_sesion }}
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <form method="post" class="row g-3">
+                                        {% csrf_token %}
+                                        
+                                        <div class="col-12">
+                                            <label for="evolucion" class="form-label">
+                                                <strong>Evolución de la Sesión *</strong>
+                                            </label>
+                                            <textarea 
+                                                name="evolucion" 
+                                                id="evolucion" 
+                                                class="form-control" 
+                                                rows="6" 
+                                                required
+                                                placeholder="Describe la evolución del paciente en esta sesión..."
+                                            ></textarea>
+                                            <div class="form-text">
+                                                Describe el progreso, respuesta al tratamiento, ejercicios realizados, etc.
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12">
+                                            <label for="observaciones" class="form-label">
+                                                <strong>Observaciones Adicionales</strong>
+                                            </label>
+                                            <textarea 
+                                                name="observaciones" 
+                                                id="observaciones" 
+                                                class="form-control" 
+                                                rows="3"
+                                                placeholder="Observaciones adicionales (opcional)..."
+                                            ></textarea>
+                                            <div class="form-text">
+                                                Notas adicionales, recomendaciones, cambios en el tratamiento, etc.
+                                            </div>
+                                        </div>
+
+                                        <!-- === SECCIÓN DE FARMACIA === -->
+                                        <div class="col-12">
+                                            <div class="card border-primary">
+                                                <div class="card-header bg-primary text-white">
+                                                    <h5 class="mb-0">
+                                                        <i class="fas fa-pills me-2"></i>
+                                                        Evaluación Farmacológica
+                                                    </h5>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="row g-3">
+                                                        <div class="col-md-6">
+                                                            <label for="sintomas_actuales" class="form-label">
+                                                                <strong>Síntomas Actuales</strong>
+                                                            </label>
+                                                            <textarea 
+                                                                name="sintomas_actuales" 
+                                                                id="sintomas_actuales" 
+                                                                class="form-control" 
+                                                                rows="3"
+                                                                placeholder="Síntomas presentes en esta sesión..."
+                                                            ></textarea>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label for="mejoria_observada" class="form-label">
+                                                                <strong>Mejorías Observadas</strong>
+                                                            </label>
+                                                            <textarea 
+                                                                name="mejoria_observada" 
+                                                                id="mejoria_observada" 
+                                                                class="form-control" 
+                                                                rows="3"
+                                                                placeholder="Mejorías desde la última sesión..."
+                                                            ></textarea>
+                                                        </div>
+                                                        <div class="col-12">
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="checkbox" value="on" id="requiere_ajuste_medicamentos" name="requiere_ajuste_medicamentos">
+                                                                <label class="form-check-label" for="requiere_ajuste_medicamentos">
+                                                                    <strong>Requiere ajuste farmacológico</strong>
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-12" id="observaciones_farmacologicas_container" style="display: none;">
+                                                            <label for="observaciones_farmacologicas" class="form-label">
+                                                                <strong>Observaciones Farmacológicas</strong>
+                                                            </label>
+                                                            <textarea 
+                                                                name="observaciones_farmacologicas" 
+                                                                id="observaciones_farmacologicas" 
+                                                                class="form-control" 
+                                                                rows="3"
+                                                                placeholder="Observaciones sobre medicamentos y dosificación..."
+                                                            ></textarea>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- === SECCIÓN DE PRESCRIPCIÓN === -->
+                                        <div class="col-12" id="prescripcion_container" style="display: none;">
+                                            <div class="card border-warning">
+                                                <div class="card-header bg-warning text-dark">
+                                                    <h5 class="mb-0">
+                                                        <i class="fas fa-prescription me-2"></i>
+                                                        Prescripción de Medicamentos
+                                                    </h5>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="form-check mb-3">
+                                                        <input class="form-check-input" type="checkbox" value="on" id="prescribir_medicamentos" name="prescribir_medicamentos">
+                                                        <label class="form-check-label" for="prescribir_medicamentos">
+                                                            <strong>Prescribir medicamentos en esta sesión</strong>
+                                                        </label>
+                                                    </div>
+                                                    
+                                                    <div id="medicamentos_container" style="display: none;">
+                                                        <!-- Buscador de medicamentos mejorado -->
+                                                        <div class="medicamento-search-container mb-4">
+                                                            <div class="row">
+                                                                <div class="col-md-8">
+                                                                    <label for="medicamento_search" class="form-label">
+                                                                        <strong><i class="fas fa-search me-2"></i>Buscar Medicamento</strong>
+                                                                    </label>
+                                                                    <div class="input-group">
+                                                                        <span class="input-group-text">
+                                                                            <i class="fas fa-pills"></i>
+                                                                        </span>
+                                                                        <input type="text" 
+                                                                               id="medicamento_search" 
+                                                                               class="form-control form-control-lg" 
+                                                                               placeholder="Escriba nombre comercial, genérico o código del medicamento..."
+                                                                               autocomplete="off">
+                                                                        <button class="btn btn-outline-secondary" type="button" id="clear_search">
+                                                                            <i class="fas fa-times"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                    <div class="form-text">
+                                                                        <i class="fas fa-lightbulb me-1 text-warning"></i>
+                                                                        Escriba al menos 2 caracteres. Busque por: nombre comercial, principio activo, código o laboratorio
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-md-4">
+                                                                    <label for="forma_filter" class="form-label">
+                                                                        <strong><i class="fas fa-filter me-2"></i>Filtrar por forma</strong>
+                                                                    </label>
+                                                                    <select id="forma_filter" class="form-select">
+                                                                        <option value="">Todas las formas</option>
+                                                                        <option value="tableta">Tabletas</option>
+                                                                        <option value="capsula">Cápsulas</option>
+                                                                        <option value="jarabe">Jarabes</option>
+                                                                        <option value="inyectable">Inyectables</option>
+                                                                        <option value="crema">Cremas/Pomadas</option>
+                                                                        <option value="gotas">Gotas</option>
+                                                                        <option value="suspension">Suspensiones</option>
+                                                                    </select>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- Resultados de búsqueda -->
+                                                        <div id="medicamentos_resultados" class="search-results mb-4" style="display: none;">
+                                                            <div class="card border-info">
+                                                                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                                                                    <h6 class="mb-0">
+                                                                        <i class="fas fa-search-plus me-2"></i>
+                                                                        Resultados de búsqueda
+                                                                    </h6>
+                                                                    <span id="resultados_count" class="badge bg-light text-dark">0 encontrados</span>
+                                                                </div>
+                                                                <div class="card-body p-0">
+                                                                    <div id="lista_medicamentos" class="list-group list-group-flush" style="max-height: 350px; overflow-y: auto;">
+                                                                        <!-- Resultados aparecerán aquí -->
+                                                                    </div>
+                                                                    <div id="loading_search" class="text-center p-3" style="display: none;">
+                                                                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                                                        <span class="ms-2">Buscando...</span>
+                                                                    </div>
+                                                                    <div id="no_results" class="text-center p-4 text-muted" style="display: none;">
+                                                                        <i class="fas fa-search fa-2x mb-2"></i>
+                                                                        <p class="mb-0">No se encontraron medicamentos con ese criterio</p>
+                                                                        <small>Intente con otro término de búsqueda</small>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- Medicamentos prescritos -->
+                                                        <div id="medicamentos_seleccionados_container">
+                                                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                                                <h6 class="text-primary mb-0">
+                                                                    <i class="fas fa-prescription-bottle-alt me-2"></i>
+                                                                    Medicamentos Prescritos
+                                                                </h6>
+                                                                <span id="contador_medicamentos" class="badge bg-primary">0 medicamentos</span>
+                                                            </div>
+                                                            <div id="medicamentos_seleccionados">
+                                                                <div class="alert alert-light text-center border-2 border-dashed" id="no_medicamentos_alert">
+                                                                    <i class="fas fa-pills fa-2x text-muted mb-2"></i>
+                                                                    <p class="mb-0 text-muted">No hay medicamentos prescritos aún</p>
+                                                                    <small class="text-muted">Use el buscador arriba para agregar medicamentos a la receta</small>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                                                                <!-- URL para la API de búsqueda -->
+                                        <script type="application/json" id="api_config">
+                                            {
+                                                "buscar_medicamentos_url": "{% url 'api_buscar_medicamentos_prescripcion' %}"
+                                            }
+                                        </script>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- === RECETAS ANTERIORES === -->
+                                        {% if recetas_anteriores %}
+                                        <div class="col-12">
+                                            <div class="card border-info">
+                                                <div class="card-header bg-info text-white">
+                                                    <h5 class="mb-0">
+                                                        <i class="fas fa-history me-2"></i>
+                                                        Recetas Anteriores del Paciente
+                                                    </h5>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="row">
+                                                        {% for receta in recetas_anteriores %}
+                                                        <div class="col-md-4">
+                                                            <div class="card mb-2">
+                                                                <div class="card-body p-2">
+                                                                    <small class="text-muted">{{ receta.fecha_dispensacion|date:"d/m/Y" }}</small>
+                                                                    <p class="mb-1"><strong>{{ receta.codigo_receta }}</strong></p>
+                                                                    <p class="mb-0 small">{{ receta.detalles.count }} medicamento(s)</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+
+                                        <!-- === PRÓXIMA SESIÓN === -->
+                                        <div class="col-12">
+                                            <div class="card border-secondary">
+                                                <div class="card-header bg-secondary text-white">
+                                                    <h5 class="mb-0">
+                                                        <i class="fas fa-calendar-alt me-2"></i>
+                                                        Próxima Sesión
+                                                    </h5>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="row">
+                                                        <div class="col-md-6">
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="checkbox" value="on" id="proxima_sesion_recomendada" name="proxima_sesion_recomendada" checked>
+                                                                <label class="form-check-label" for="proxima_sesion_recomendada">
+                                                                    <strong>Se recomienda próxima sesión</strong>
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label for="observaciones_proxima_sesion" class="form-label">
+                                                                <strong>Observaciones para próxima sesión</strong>
+                                                            </label>
+                                                            <textarea 
+                                                                name="observaciones_proxima_sesion" 
+                                                                id="observaciones_proxima_sesion" 
+                                                                class="form-control" 
+                                                                rows="2"
+                                                                placeholder="Recomendaciones para la próxima sesión..."
+                                                            ></textarea>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12">
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                <strong>Importante:</strong> Al completar esta sesión, se marcará como atendida 
+                                                y se podrá proceder con la siguiente sesión del tratamiento.
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12">
+                                            <div class="d-flex justify-content-between">
+                                                <a href="{% url 'detalle_seguimiento' tratamiento.id %}" 
+                                                   class="btn btn-secondary">
+                                                    <i class="fas fa-arrow-left me-2"></i>
+                                                    Volver al Tratamiento
+                                                </a>
+                                                <button type="submit" class="btn btn-success">
+                                                    <i class="fas fa-save me-2"></i>
+                                                    Completar Sesión
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Estilos personalizados para búsqueda de medicamentos */
+    .medicamento-search-container {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 10px;
+        padding: 20px;
+        border: 1px solid #dee2e6;
+    }
+    
+    .medicamento-item {
+        transition: all 0.3s ease;
+        border: none !important;
+        border-radius: 8px;
+        margin-bottom: 5px;
+    }
+    
+    .medicamento-item:hover {
+        background-color: #f8f9fa;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .medicamento-prescrito {
+        border: 2px solid #28a745;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+    
+    .medicamento-prescrito:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .search-results {
+        animation: fadeIn 0.3s ease;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+    }
+    
+    .badge {
+        font-size: 0.75em;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #80bdff;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+    }
+    
+    .btn-outline-primary:hover {
+        transform: scale(1.05);
+    }
+    
+    .btn-outline-danger:hover {
+        transform: scale(1.05);
+    }
+    
+    .list-group-flush .list-group-item:first-child {
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+    }
+    
+    .list-group-flush .list-group-item:last-child {
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+    
+    .border-dashed {
+        border-style: dashed !important;
+    }
+    
+    .text-primary {
+        color: #007bff !important;
+    }
+    
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    }
+    
+    .form-text {
+        font-size: 0.875em;
+    }
+    
+    .card-header {
+        border-bottom: 1px solid rgba(0,0,0,0.125);
+    }
+    
+    .input-group-text {
+        background-color: #f8f9fa;
+        border-color: #ced4da;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .medicamento-search-container {
+            padding: 15px;
+        }
+        
+        .medicamento-item {
+            padding: 15px;
+        }
+        
+        .card-header {
+            padding: 10px 15px;
+        }
+        
+        .card-body {
+            padding: 15px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-resize textarea
+document.addEventListener('DOMContentLoaded', function() {
+    const textareas = document.querySelectorAll('textarea');
+    textareas.forEach(textarea => {
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
+    });
+
+    // === FUNCIONALIDAD DE FARMACIA MEJORADA ===
+    
+    // Configuración de API y variables globales
+    let apiConfig = {};
+    let medicamentosSeleccionadosIds = new Set();
+    let medicamentosCount = 0;
+    
+    // Cargar configuración de API
+    try {
+        const apiScript = document.getElementById('api_config');
+        if (apiScript) {
+            apiConfig = JSON.parse(apiScript.textContent);
+        }
+    } catch (e) {
+        console.error('Error al cargar configuración de API:', e);
+    }
+    
+    // Mostrar/ocultar sección de observaciones farmacológicas
+    const requiereAjusteCheck = document.getElementById('requiere_ajuste_medicamentos');
+    const observacionesFarmContainer = document.getElementById('observaciones_farmacologicas_container');
+    const prescripcionContainer = document.getElementById('prescripcion_container');
+    
+    requiereAjusteCheck.addEventListener('change', function() {
+        if (this.checked) {
+            observacionesFarmContainer.style.display = 'block';
+            prescripcionContainer.style.display = 'block';
+        } else {
+            observacionesFarmContainer.style.display = 'none';
+            prescripcionContainer.style.display = 'none';
+            // Limpiar campos relacionados
+            document.getElementById('prescribir_medicamentos').checked = false;
+            document.getElementById('medicamentos_container').style.display = 'none';
+            limpiarMedicamentosSeleccionados();
+        }
+    });
+    
+    // Mostrar/ocultar sección de medicamentos
+    const prescribirCheck = document.getElementById('prescribir_medicamentos');
+    const medicamentosContainer = document.getElementById('medicamentos_container');
+    
+    prescribirCheck.addEventListener('change', function() {
+        if (this.checked) {
+            medicamentosContainer.style.display = 'block';
+            // Enfocar el campo de búsqueda
+            setTimeout(() => {
+                document.getElementById('medicamento_search').focus();
+            }, 100);
+        } else {
+            medicamentosContainer.style.display = 'none';
+            limpiarBusqueda();
+            limpiarMedicamentosSeleccionados();
+        }
+    });
+    
+    // === FUNCIONALIDAD DE BÚSQUEDA ===
+    const searchInput = document.getElementById('medicamento_search');
+    const formaFilter = document.getElementById('forma_filter');
+    const resultadosContainer = document.getElementById('medicamentos_resultados');
+    const listaMedicamentos = document.getElementById('lista_medicamentos');
+    const resultadosCount = document.getElementById('resultados_count');
+    const loadingSearch = document.getElementById('loading_search');
+    const noResults = document.getElementById('no_results');
+    const clearSearchBtn = document.getElementById('clear_search');
+    
+    let searchTimeout;
+    
+    // Búsqueda en tiempo real
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const query = this.value.trim();
+        
+        if (query.length < 2) {
+            ocultarResultados();
+            return;
+        }
+        
+        // Mostrar loading
+        mostrarLoading();
+        
+        // Debounce para evitar muchas búsquedas
+        searchTimeout = setTimeout(() => {
+            buscarMedicamentos(query);
+        }, 300);
+    });
+    
+    // Filtro por forma farmacéutica
+    formaFilter.addEventListener('change', function() {
+        const query = searchInput.value.trim();
+        if (query.length >= 2) {
+            buscarMedicamentos(query);
+        }
+    });
+    
+    // Limpiar búsqueda
+    clearSearchBtn.addEventListener('click', function() {
+        limpiarBusqueda();
+    });
+    
+    // Función de búsqueda usando API
+    function buscarMedicamentos(query) {
+        const forma = formaFilter.value;
+        
+        // Construir URL con parámetros
+        const url = new URL(apiConfig.buscar_medicamentos_url, window.location.origin);
+        url.searchParams.append('q', query);
+        if (forma) {
+            url.searchParams.append('forma', forma);
+        }
+        
+        // Realizar petición AJAX
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error en la búsqueda');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.medicamentos) {
+                // Filtrar medicamentos ya seleccionados
+                const resultados = data.medicamentos.filter(med => 
+                    !medicamentosSeleccionadosIds.has(med.id)
+                );
+                mostrarResultados(resultados);
+            } else {
+                mostrarSinResultados();
+            }
+        })
+        .catch(error => {
+            console.error('Error en búsqueda de medicamentos:', error);
+            ocultarLoading();
+            mostrarSinResultados();
+        });
+    }
+    
+    // Mostrar resultados
+    function mostrarResultados(resultados) {
+        ocultarLoading();
+        
+        if (resultados.length === 0) {
+            mostrarSinResultados();
+            return;
+        }
+        
+        resultadosCount.textContent = `${resultados.length} encontrado${resultados.length !== 1 ? 's' : ''}`;
+        
+        listaMedicamentos.innerHTML = resultados.map(med => `
+            <div class="list-group-item list-group-item-action medicamento-item" 
+                 data-medicamento-id="${med.id}"
+                 style="cursor: pointer;">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-1 text-primary">${med.nombre_comercial}</h6>
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-light text-dark me-2">${med.forma_farmaceutica}</span>
+                                <span class="badge ${med.stock_estado === 'critico' ? 'bg-danger' : med.stock_estado === 'bajo' ? 'bg-warning' : 'bg-success'}">
+                                    Stock: ${med.stock_actual}
+                                </span>
+                                ${med.controlado ? '<span class="badge bg-dark ms-1">Controlado</span>' : ''}
+                            </div>
+                        </div>
+                        <p class="mb-1 text-muted small">${med.nombre_generico} - ${med.concentracion}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="fas fa-industry me-1"></i>${med.laboratorio} | 
+                                <i class="fas fa-barcode me-1"></i>${med.codigo}
+                            </small>
+                            <small class="text-success fw-bold">
+                                S/ ${parseFloat(med.precio_unitario).toFixed(2)}
+                            </small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary ms-3 agregar-medicamento-btn">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+        
+        // Agregar event listeners a los botones
+        document.querySelectorAll('.agregar-medicamento-btn').forEach((btn, index) => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const medicamentoItem = this.closest('.medicamento-item');
+                const medicamentoId = parseInt(medicamentoItem.dataset.medicamentoId);
+                const medicamento = resultados[index];
+                agregarMedicamento(medicamento);
+            });
+        });
+        
+        // Agregar event listeners a los items (click en cualquier parte)
+        document.querySelectorAll('.medicamento-item').forEach((item, index) => {
+            item.addEventListener('click', function() {
+                const medicamento = resultados[index];
+                agregarMedicamento(medicamento);
+            });
+        });
+        
+        resultadosContainer.style.display = 'block';
+    }
+    
+    // Agregar medicamento a la prescripción
+    function agregarMedicamento(medicamento) {
+        if (!medicamento) return;
+        
+        // Verificar stock
+        if (medicamento.stock_actual <= 0) {
+            alert('Este medicamento no tiene stock disponible');
+            return;
+        }
+        
+        // Agregar a seleccionados
+        const medicamentoId = medicamento.id;
+        medicamentosSeleccionadosIds.add(medicamentoId);
+        medicamentosCount++;
+        
+        const medicamentoHTML = `
+            <div class="card mb-3 medicamento-prescrito" id="medicamento_${medicamentoId}">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 text-primary">${medicamento.nombre_comercial}</h6>
+                        <small class="text-muted">${medicamento.nombre_generico} - ${medicamento.concentracion}</small>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-info me-2">${medicamento.forma_farmaceutica}</span>
+                        <span class="badge ${medicamento.stock_estado === 'critico' ? 'bg-danger' : medicamento.stock_estado === 'bajo' ? 'bg-warning' : 'bg-success'} me-2">
+                            Stock: ${medicamento.stock_actual}
+                        </span>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarMedicamento(${medicamentoId})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <input type="hidden" name="medicamentos" value="${medicamentoId}">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Dosis por toma *</label>
+                            <div class="input-group">
+                                <input type="number" name="dosis_cantidad_${medicamentoId}" class="form-control dosis-cantidad" 
+                                       value="1" min="0.5" step="0.5" required data-medicamento-id="${medicamentoId}">
+                                <span class="input-group-text">${medicamento.forma_farmaceutica}</span>
+                            </div>
+                            <div class="form-text">Cantidad que toma en cada administración</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Frecuencia *</label>
+                            <select name="frecuencia_${medicamentoId}" class="form-select frecuencia-select" required data-medicamento-id="${medicamentoId}">
+                                <option value="">Seleccione frecuencia...</option>
+                                <option value="Cada 4 horas" data-veces="6">Cada 4 horas (6 veces al día)</option>
+                                <option value="Cada 6 horas" data-veces="4">Cada 6 horas (4 veces al día)</option>
+                                <option value="Cada 8 horas" data-veces="3">Cada 8 horas (3 veces al día)</option>
+                                <option value="Cada 12 horas" data-veces="2">Cada 12 horas (2 veces al día)</option>
+                                <option value="Una vez al día" data-veces="1">Una vez al día</option>
+                                <option value="Dos veces al día" data-veces="2">Dos veces al día</option>
+                                <option value="Tres veces al día" data-veces="3">Tres veces al día</option>
+                                <option value="Según necesidad" data-veces="0">Según necesidad</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Duración (días) *</label>
+                            <input type="number" name="duracion_${medicamentoId}" class="form-control duracion-input" 
+                                   value="7" min="1" max="365" required data-medicamento-id="${medicamentoId}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Cantidad TOTAL a prescribir *</label>
+                            <div class="input-group">
+                                <input type="number" name="cantidad_${medicamentoId}" class="form-control cantidad-total" 
+                                       value="21" min="1" max="${medicamento.stock_actual}" required readonly data-medicamento-id="${medicamentoId}">
+                                <span class="input-group-text">${medicamento.forma_farmaceutica}</span>
+                            </div>
+                            <div class="form-text text-success">
+                                <i class="fas fa-calculator me-1"></i>
+                                <span class="calculo-texto" id="calculo_${medicamentoId}">Calculado automáticamente</span>
+                                <br><small class="text-muted">Máximo disponible: ${medicamento.stock_actual}</small>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Instrucciones de administración *</label>
+                            <textarea name="instrucciones_${medicamentoId}" class="form-control" rows="2" 
+                                      placeholder="Ej: Tomar con alimentos, después de las comidas, con abundante agua..." required></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Ocultar alert de no medicamentos
+        const noMedAlert = document.getElementById('no_medicamentos_alert');
+        if (noMedAlert) noMedAlert.style.display = 'none';
+        
+        document.getElementById('medicamentos_seleccionados').insertAdjacentHTML('beforeend', medicamentoHTML);
+        
+        // Actualizar contador
+        document.getElementById('contador_medicamentos').textContent = `${medicamentosCount} medicamento${medicamentosCount !== 1 ? 's' : ''}`;
+        
+        // Limpiar búsqueda y ocultar resultados
+        limpiarBusqueda();
+        
+        // Agregar event listeners para cálculo automático
+        agregarCalculadoraEventos(medicamentoId);
+        
+        // Calcular cantidad inicial
+        calcularCantidadTotal(medicamentoId);
+        
+        // Scroll al medicamento agregado
+        setTimeout(() => {
+            document.getElementById(`medicamento_${medicamentoId}`).scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest'
+            });
+        }, 100);
+    }
+    
+    // Función para agregar eventos de calculadora
+    function agregarCalculadoraEventos(medicamentoId) {
+        const dosisInput = document.querySelector(`input[name="dosis_cantidad_${medicamentoId}"]`);
+        const frecuenciaSelect = document.querySelector(`select[name="frecuencia_${medicamentoId}"]`);
+        const duracionInput = document.querySelector(`input[name="duracion_${medicamentoId}"]`);
+        
+        if (dosisInput) {
+            dosisInput.addEventListener('input', () => calcularCantidadTotal(medicamentoId));
+        }
+        if (frecuenciaSelect) {
+            frecuenciaSelect.addEventListener('change', () => calcularCantidadTotal(medicamentoId));
+        }
+        if (duracionInput) {
+            duracionInput.addEventListener('input', () => calcularCantidadTotal(medicamentoId));
+        }
+    }
+    
+    // Función para calcular cantidad total automáticamente
+    function calcularCantidadTotal(medicamentoId) {
+        const dosisInput = document.querySelector(`input[name="dosis_cantidad_${medicamentoId}"]`);
+        const frecuenciaSelect = document.querySelector(`select[name="frecuencia_${medicamentoId}"]`);
+        const duracionInput = document.querySelector(`input[name="duracion_${medicamentoId}"]`);
+        const cantidadInput = document.querySelector(`input[name="cantidad_${medicamentoId}"]`);
+        const calculoTexto = document.getElementById(`calculo_${medicamentoId}`);
+        
+        if (!dosisInput || !frecuenciaSelect || !duracionInput || !cantidadInput) return;
+        
+        const dosisPorToma = parseFloat(dosisInput.value) || 0;
+        const selectedOption = frecuenciaSelect.options[frecuenciaSelect.selectedIndex];
+        const vecesPorDia = selectedOption ? parseInt(selectedOption.getAttribute('data-veces')) || 0 : 0;
+        const dias = parseInt(duracionInput.value) || 0;
+        
+        if (dosisPorToma > 0 && vecesPorDia > 0 && dias > 0) {
+            const cantidadTotal = Math.ceil(dosisPorToma * vecesPorDia * dias);
+            cantidadInput.value = cantidadTotal;
+            
+            // Actualizar texto explicativo
+            calculoTexto.innerHTML = `${dosisPorToma} × ${vecesPorDia} veces × ${dias} días = ${cantidadTotal}`;
+            
+            // Validar stock
+            const maxStock = parseInt(cantidadInput.getAttribute('max'));
+            if (cantidadTotal > maxStock) {
+                cantidadInput.style.borderColor = '#dc3545';
+                calculoTexto.innerHTML += `<br><span class="text-danger"><i class="fas fa-exclamation-triangle"></i> Excede stock disponible (${maxStock})</span>`;
+            } else {
+                cantidadInput.style.borderColor = '#28a745';
+            }
+        } else if (vecesPorDia === 0 && frecuenciaSelect.value === 'Según necesidad') {
+            // Para medicamentos "según necesidad", usar una cantidad base
+            const cantidadBase = Math.ceil(dosisPorToma * dias * 2); // 2 veces promedio
+            cantidadInput.value = cantidadBase;
+            cantidadInput.readOnly = false; // Permitir edición manual
+            calculoTexto.innerHTML = `${dosisPorToma} × aprox. 2 veces × ${dias} días = ${cantidadBase} (editable)`;
+        } else {
+            calculoTexto.innerHTML = 'Complete todos los campos para calcular';
+            cantidadInput.style.borderColor = '';
+        }
+    }
+    
+    // Función global para eliminar medicamento
+    window.eliminarMedicamento = function(medicamentoId) {
+        const medicamentoCard = document.getElementById(`medicamento_${medicamentoId}`);
+        if (medicamentoCard) {
+            medicamentoCard.remove();
+            medicamentosSeleccionadosIds.delete(medicamentoId);
+            medicamentosCount--;
+            
+            // Actualizar contador
+            document.getElementById('contador_medicamentos').textContent = `${medicamentosCount} medicamento${medicamentosCount !== 1 ? 's' : ''}`;
+            
+            // Mostrar alert si no hay medicamentos
+            if (medicamentosCount === 0) {
+                document.getElementById('no_medicamentos_alert').style.display = 'block';
+            }
+        }
+    };
+    
+    // Funciones auxiliares
+    function mostrarLoading() {
+        loadingSearch.style.display = 'block';
+        listaMedicamentos.style.display = 'none';
+        noResults.style.display = 'none';
+        resultadosContainer.style.display = 'block';
+    }
+    
+    function ocultarLoading() {
+        loadingSearch.style.display = 'none';
+        listaMedicamentos.style.display = 'block';
+    }
+    
+    function mostrarSinResultados() {
+        ocultarLoading();
+        listaMedicamentos.style.display = 'none';
+        noResults.style.display = 'block';
+        resultadosCount.textContent = '0 encontrados';
+        resultadosContainer.style.display = 'block';
+    }
+    
+    function ocultarResultados() {
+        resultadosContainer.style.display = 'none';
+    }
+    
+    function limpiarBusqueda() {
+        searchInput.value = '';
+        formaFilter.value = '';
+        ocultarResultados();
+    }
+    
+    function limpiarMedicamentosSeleccionados() {
+        document.getElementById('medicamentos_seleccionados').innerHTML = `
+            <div class="alert alert-light text-center border-2 border-dashed" id="no_medicamentos_alert">
+                <i class="fas fa-pills fa-2x text-muted mb-2"></i>
+                <p class="mb-0 text-muted">No hay medicamentos prescritos aún</p>
+                <small class="text-muted">Use el buscador arriba para agregar medicamentos a la receta</small>
+            </div>
+        `;
+        medicamentosSeleccionadosIds.clear();
+        medicamentosCount = 0;
+        document.getElementById('contador_medicamentos').textContent = '0 medicamentos';
+    }
+    
+    // Validación antes de enviar
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const requiereAjuste = document.getElementById('requiere_ajuste_medicamentos').checked;
+        const prescribir = document.getElementById('prescribir_medicamentos').checked;
+        const medicamentosSeleccionados = document.querySelectorAll('input[name="medicamentos"]');
+        
+        // Validar que si se requiere ajuste farmacológico, se hayan llenado las observaciones
+        if (requiereAjuste) {
+            const observacionesFarm = document.querySelector('textarea[name="observaciones_farmacologicas"]').value;
+            if (!observacionesFarm || observacionesFarm.trim().length === 0) {
+                e.preventDefault();
+                alert('Si requiere ajuste farmacológico, debe completar las observaciones farmacológicas.');
+                document.querySelector('textarea[name="observaciones_farmacologicas"]').focus();
+                return false;
+            }
+        }
+        
+        // Validar prescripción de medicamentos
+        if (prescribir && medicamentosSeleccionados.length === 0) {
+            e.preventDefault();
+            alert('Si marcó "Prescribir medicamentos", debe agregar al menos un medicamento a la receta.');
+            document.getElementById('medicamento_search').focus();
+            return false;
+        }
+        
+        if (prescribir && medicamentosSeleccionados.length > 0) {
+            // Validar que todos los medicamentos tengan los campos requeridos
+            for (let med of medicamentosSeleccionados) {
+                const id = med.value;
+                const cantidad = document.querySelector(`input[name="cantidad_${id}"]`);
+                const dosis = document.querySelector(`input[name="dosis_${id}"]`);
+                const frecuencia = document.querySelector(`select[name="frecuencia_${id}"]`);
+                const duracion = document.querySelector(`input[name="duracion_${id}"]`);
+                const instrucciones = document.querySelector(`textarea[name="instrucciones_${id}"]`);
+                
+                if (!cantidad.value || !dosis.value || !frecuencia.value || !duracion.value || !instrucciones.value) {
+                    e.preventDefault();
+                    alert('Complete todos los campos requeridos para cada medicamento prescrito.');
+                    
+                    // Hacer scroll al medicamento con campos incompletos
+                    document.getElementById(`medicamento_${id}`).scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+                    
+                    // Enfocar el primer campo vacío
+                    if (!cantidad.value) cantidad.focus();
+                    else if (!dosis.value) dosis.focus();
+                    else if (!frecuencia.value) frecuencia.focus();
+                    else if (!duracion.value) duracion.focus();
+                    else if (!instrucciones.value) instrucciones.focus();
+                    
+                    return false;
+                }
+                
+                // La validación de stock se realiza en el backend
+            }
+        }
+        
+        // Mostrar confirmación antes de enviar
+        const confirmMsg = prescribir && medicamentosSeleccionados.length > 0 
+            ? `¿Está seguro de completar esta sesión? Se generará una receta con ${medicamentosSeleccionados.length} medicamento${medicamentosSeleccionados.length !== 1 ? 's' : ''}.`
+            : '¿Está seguro de completar esta sesión?';
+            
+        if (!confirm(confirmMsg)) {
+            e.preventDefault();
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %} 

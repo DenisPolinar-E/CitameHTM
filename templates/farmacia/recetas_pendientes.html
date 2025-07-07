@@ -1,0 +1,198 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Recetas Pendientes - Farmacia{% endblock %}
+
+{% block page_title %}Recetas Pendientes{% endblock %}
+
+{% block sidebar_menu %}
+<a href="{% url 'dashboard_farmacia' %}" class="menu-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="{% url 'recetas_pendientes' %}" class="menu-item active"><i class="fas fa-prescription"></i> Recetas Pendientes</a>
+<a href="{% url 'inventario_medicamentos' %}" class="menu-item"><i class="fas fa-pills"></i> Inventario</a>
+<a href="{% url 'alertas_farmacia' %}" class="menu-item"><i class="fas fa-exclamation-triangle"></i> Alertas</a>
+<a href="{% url 'perfil_admin' %}" class="menu-item"><i class="fas fa-user"></i> Mi Perfil</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .receta-card {
+        border-left: 4px solid #007bff;
+        transition: all 0.3s ease;
+    }
+    
+    .receta-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .receta-urgente {
+        border-left-color: #dc3545 !important;
+        background-color: #fff5f5;
+    }
+    
+    .filter-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Filtros -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card filter-card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="busqueda" class="form-label">Buscar Receta o Paciente</label>
+                            <input type="text" class="form-control" id="busqueda" name="busqueda" 
+                                   value="{{ busqueda }}" placeholder="Código, nombre, DNI...">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="estado" class="form-label">Estado</label>
+                            <select class="form-select" id="estado" name="estado">
+                                <option value="pendiente" {% if estado_filtro == 'pendiente' %}selected{% endif %}>Pendiente</option>
+                                <option value="parcial" {% if estado_filtro == 'parcial' %}selected{% endif %}>Parcialmente Dispensada</option>
+                                <option value="dispensada" {% if estado_filtro == 'dispensada' %}selected{% endif %}>Dispensada</option>
+                                <option value="" {% if not estado_filtro %}selected{% endif %}>Todos</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="urgente" class="form-label">Urgencia</label>
+                            <select class="form-select" id="urgente" name="urgente">
+                                <option value="">Todas</option>
+                                <option value="si" {% if urgente_filtro == 'si' %}selected{% endif %}>Solo Urgentes</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="submit" class="btn btn-light d-block w-100">
+                                <i class="fas fa-search me-2"></i>Buscar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de recetas -->
+    <div class="row">
+        <div class="col-12">
+            {% if recetas %}
+                {% for receta in recetas %}
+                <div class="card receta-card mb-3 {% if receta.urgente %}receta-urgente{% endif %}">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-3">
+                                <h6 class="mb-1">
+                                    <strong>{{ receta.codigo_receta }}</strong>
+                                    {% if receta.urgente %}
+                                        <span class="badge bg-danger ms-2">URGENTE</span>
+                                    {% endif %}
+                                </h6>
+                                <p class="mb-1">
+                                    <strong>Paciente:</strong><br>
+                                    {{ receta.paciente.usuario.nombres }} {{ receta.paciente.usuario.apellidos }}
+                                </p>
+                                <small class="text-muted">DNI: {{ receta.paciente.usuario.dni }}</small>
+                            </div>
+                            <div class="col-md-3">
+                                <p class="mb-1">
+                                    <strong>Médico:</strong><br>
+                                    Dr. {{ receta.medico.usuario.nombres }} {{ receta.medico.usuario.apellidos }}
+                                </p>
+                                <small class="text-muted">{{ receta.medico.especialidad.nombre }}</small>
+                            </div>
+                            <div class="col-md-2">
+                                <p class="mb-1">
+                                    <strong>Fecha:</strong><br>
+                                    {{ receta.fecha_prescripcion|date:"d/m/Y" }}
+                                </p>
+                                <small class="text-muted">{{ receta.fecha_prescripcion|date:"H:i" }}</small>
+                            </div>
+                            <div class="col-md-2">
+                                <p class="mb-1">
+                                    <strong>Estado:</strong><br>
+                                    {% if receta.estado == 'pendiente' %}
+                                        <span class="badge bg-warning">Pendiente</span>
+                                    {% elif receta.estado == 'parcial' %}
+                                        <span class="badge bg-info">Parcial</span>
+                                    {% elif receta.estado == 'dispensada' %}
+                                        <span class="badge bg-success">Dispensada</span>
+                                    {% endif %}
+                                </p>
+                                <small class="text-muted">{{ receta.total_medicamentos }} medicamento(s)</small>
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <a href="{% url 'detalle_receta' receta.id %}" class="btn btn-sm btn-outline-primary me-2">
+                                    <i class="fas fa-eye"></i> Ver
+                                </a>
+                                {% if receta.estado != 'dispensada' %}
+                                <a href="{% url 'dispensar_receta' receta.id %}" class="btn btn-sm btn-success">
+                                    <i class="fas fa-check"></i> Dispensar
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Vista previa de medicamentos -->
+                        {% if receta.detalles.all %}
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <div class="bg-light p-2 rounded">
+                                    <strong>Medicamentos:</strong>
+                                    <ul class="mb-0 mt-1">
+                                        {% for detalle in receta.detalles.all|slice:":3" %}
+                                        <li>{{ detalle.medicamento.nombre_comercial }} - {{ detalle.dosis }} ({{ detalle.cantidad_prescrita }})</li>
+                                        {% endfor %}
+                                        {% if receta.detalles.count > 3 %}
+                                        <li class="text-muted">... y {{ receta.detalles.count|add:"-3" }} más</li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                
+            {% else %}
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-prescription fa-4x text-muted mb-3"></i>
+                        <h4>No se encontraron recetas</h4>
+                        <p class="text-muted">No hay recetas que coincidan con los filtros seleccionados.</p>
+                        <a href="{% url 'recetas_pendientes' %}" class="btn btn-primary">
+                            <i class="fas fa-refresh me-2"></i>Ver Todas las Recetas
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-actualizar cada 2 minutos
+    setInterval(function() {
+        location.reload();
+    }, 120000);
+    
+    // Resaltar recetas urgentes
+    const recetasUrgentes = document.querySelectorAll('.receta-urgente');
+    recetasUrgentes.forEach(receta => {
+        setInterval(() => {
+            receta.style.backgroundColor = receta.style.backgroundColor === 'rgb(255, 245, 245)' ? '#ffebee' : '#fff5f5';
+        }, 1000);
+    });
+});
+</script>
+{% endblock %} 

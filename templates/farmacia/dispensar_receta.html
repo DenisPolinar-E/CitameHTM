@@ -1,0 +1,437 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Dispensar Receta {{ receta.codigo_receta }} - Farmacia{% endblock %}
+
+{% block page_title %}Dispensar Receta{% endblock %}
+
+{% block sidebar_menu %}
+<a href="{% url 'dashboard_farmacia' %}" class="menu-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="{% url 'recetas_pendientes' %}" class="menu-item"><i class="fas fa-prescription"></i> Recetas Pendientes</a>
+<a href="{% url 'inventario_medicamentos' %}" class="menu-item"><i class="fas fa-pills"></i> Inventario</a>
+<a href="{% url 'alertas_farmacia' %}" class="menu-item"><i class="fas fa-exclamation-triangle"></i> Alertas</a>
+<a href="{% url 'perfil_admin' %}" class="menu-item"><i class="fas fa-user"></i> Mi Perfil</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dispensar-header {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .paciente-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        border-left: 4px solid #28a745;
+        margin-bottom: 20px;
+    }
+    
+    .medicamento-dispensar {
+        border: 2px solid #28a745;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        background: white;
+        transition: all 0.3s ease;
+    }
+    
+    .medicamento-dispensar:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .stock-critico {
+        border-color: #dc3545 !important;
+        background-color: #fff5f5;
+    }
+    
+    .stock-warning {
+        border-color: #ffc107 !important;
+        background-color: #fffbf0;
+    }
+    
+    .cantidad-input {
+        font-size: 1.2em;
+        text-align: center;
+        font-weight: bold;
+    }
+    
+    .form-control:focus {
+        border-color: #28a745;
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    }
+    
+    .btn-dispensar {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border: none;
+        padding: 12px 30px;
+        font-size: 1.1em;
+        font-weight: bold;
+    }
+    
+    .btn-dispensar:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header de dispensación -->
+    <div class="dispensar-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h3 class="mb-0">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Dispensar Receta {{ receta.codigo_receta }}
+                    {% if receta.urgente %}
+                        <span class="badge bg-danger ms-2">URGENTE</span>
+                    {% endif %}
+                </h3>
+                <p class="mb-0 mt-2">
+                    <i class="fas fa-calendar me-2"></i>
+                    Prescrita el {{ receta.fecha_prescripcion|date:"d/m/Y H:i" }}
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'detalle_receta' receta.id %}" class="btn btn-light me-2">
+                    <i class="fas fa-eye me-2"></i>Ver Detalle
+                </a>
+                <a href="{% url 'recetas_pendientes' %}" class="btn btn-light">
+                    <i class="fas fa-arrow-left me-2"></i>Volver
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información del Paciente -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="paciente-card">
+                <div class="row align-items-center">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <i class="fas fa-user-circle fa-4x text-success mb-2"></i>
+                            <h5 class="mb-0">{{ receta.paciente.usuario.nombres }} {{ receta.paciente.usuario.apellidos }}</h5>
+                        </div>
+                    </div>
+                    <div class="col-md-9">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <strong>DNI:</strong><br>
+                                <span class="fs-5 text-primary">{{ receta.paciente.usuario.dni }}</span>
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Edad:</strong><br>
+                                {{ receta.paciente.edad }} años
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Teléfono:</strong><br>
+                                {{ receta.paciente.usuario.telefono|default:"No registrado" }}
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-8">
+                                <strong>Dirección:</strong><br>
+                                {{ receta.paciente.usuario.direccion|default:"No registrada" }}
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Médico:</strong><br>
+                                Dr. {{ receta.medico.usuario.nombres }} {{ receta.medico.usuario.apellidos }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario de Dispensación -->
+    <form method="post" id="dispensarForm">
+        {% csrf_token %}
+        
+        <!-- Alerta de instrucciones -->
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Instrucciones de Dispensación:</strong>
+            <ul class="mb-0 mt-2">
+                <li>Verifique la identidad del paciente antes de dispensar</li>
+                <li>Ingrese la cantidad exacta a dispensar para cada medicamento</li>
+                <li>Registre el número de lote cuando sea necesario</li>
+                <li>Puede dispensar parcialmente si no hay stock suficiente</li>
+            </ul>
+        </div>
+
+        <!-- Medicamentos a Dispensar -->
+        <div class="row">
+            <div class="col-12">
+                <h5 class="mb-3">
+                    <i class="fas fa-pills me-2"></i>
+                    Medicamentos a Dispensar
+                </h5>
+                
+                {% for detalle in receta.detalles.all %}
+                <div class="medicamento-dispensar {% if detalle.medicamento.stock_actual <= 0 %}stock-critico{% elif detalle.medicamento.stock_actual <= detalle.medicamento.stock_minimo %}stock-warning{% endif %}">
+                    <div class="row align-items-center">
+                        <div class="col-md-5">
+                            <h6 class="text-primary mb-2">{{ detalle.medicamento.nombre_comercial }}</h6>
+                            <p class="mb-1">
+                                <strong>Principio Activo:</strong> {{ detalle.medicamento.nombre_generico }}<br>
+                                <strong>Concentración:</strong> {{ detalle.medicamento.concentracion }}<br>
+                                <strong>Forma:</strong> {{ detalle.medicamento.forma_farmaceutica }}
+                            </p>
+                            <small class="text-muted">
+                                <i class="fas fa-barcode me-1"></i>{{ detalle.medicamento.codigo }} | 
+                                <i class="fas fa-industry me-1"></i>{{ detalle.medicamento.laboratorio }}
+                            </small>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="mb-2">
+                                    <span class="badge {% if detalle.medicamento.stock_actual <= 0 %}bg-danger{% elif detalle.medicamento.stock_actual <= detalle.medicamento.stock_minimo %}bg-warning{% else %}bg-success{% endif %} fs-6">
+                                        Stock: {{ detalle.medicamento.stock_actual }}
+                                    </span>
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Prescrito:</strong><br>
+                                    <span class="fs-5 text-primary">{{ detalle.cantidad_prescrita }}</span>
+                                </div>
+                                {% if detalle.cantidad_dispensada > 0 %}
+                                <div class="mb-2">
+                                    <strong>Ya Dispensado:</strong><br>
+                                    <span class="fs-5 text-success">{{ detalle.cantidad_dispensada }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label class="form-label fw-bold">Cantidad a Dispensar</label>
+                                    <input type="number" 
+                                           name="cantidad_{{ detalle.id }}" 
+                                           class="form-control cantidad-input" 
+                                           value="{% if detalle.cantidad_dispensada == 0 %}{{ detalle.cantidad_prescrita }}{% else %}0{% endif %}"
+                                           min="0" 
+                                           max="{{ detalle.medicamento.stock_actual }}"
+                                           {% if detalle.medicamento.stock_actual <= 0 %}disabled{% endif %}>
+                                    <div class="form-text">
+                                        Máximo: {{ detalle.medicamento.stock_actual }}
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label fw-bold">Lote (Opcional)</label>
+                                    <input type="text" 
+                                           name="lote_{{ detalle.id }}" 
+                                           class="form-control" 
+                                           placeholder="Ej: L2024001"
+                                           {% if detalle.medicamento.stock_actual <= 0 %}disabled{% endif %}>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Instrucciones del medicamento -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="bg-light p-3 rounded">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <strong>Instrucciones:</strong><br>
+                                        {{ detalle.instrucciones }}
+                                    </div>
+                                    <div class="col-md-4">
+                                        <strong>Posología:</strong><br>
+                                        {{ detalle.dosis }} - {{ detalle.frecuencia }} por {{ detalle.duracion_dias }} días
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Alertas de stock -->
+                    {% if detalle.medicamento.stock_actual <= 0 %}
+                    <div class="alert alert-danger mt-3 mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Sin Stock:</strong> Este medicamento no puede dispensarse por falta de stock.
+                    </div>
+                    {% elif detalle.medicamento.stock_actual <= detalle.medicamento.stock_minimo %}
+                    <div class="alert alert-warning mt-3 mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Stock Bajo:</strong> Este medicamento tiene stock crítico.
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Observaciones de Dispensación -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-sticky-note me-2"></i>
+                            Observaciones de Dispensación (Opcional)
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <textarea name="observaciones_dispensacion" 
+                                  class="form-control" 
+                                  rows="3" 
+                                  placeholder="Ingrese observaciones adicionales sobre la dispensación..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="row mt-4 mb-4">
+            <div class="col-12 text-center">
+                <div class="btn-group" role="group">
+                    <a href="{% url 'detalle_receta' receta.id %}" class="btn btn-secondary">
+                        <i class="fas fa-eye me-2"></i>Ver Detalle
+                    </a>
+                    <a href="{% url 'recetas_pendientes' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-success btn-dispensar">
+                        <i class="fas fa-check me-2"></i>Dispensar Medicamentos
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Modal de Confirmación -->
+<div class="modal fade" id="confirmarDispensacion" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Confirmar Dispensación
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>¿Está seguro de dispensar estos medicamentos?</strong></p>
+                <p class="text-muted">Esta acción no se puede deshacer. Verifique que:</p>
+                <ul>
+                    <li>Ha verificado la identidad del paciente</li>
+                    <li>Las cantidades son correctas</li>
+                    <li>Ha registrado los lotes cuando corresponde</li>
+                </ul>
+                <div id="resumen-dispensacion" class="bg-light p-3 rounded mt-3">
+                    <!-- Se llenará dinámicamente -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-success" id="confirmarDispensacionBtn">
+                    <i class="fas fa-check me-2"></i>Confirmar Dispensación
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('dispensarForm');
+    const confirmarModal = new bootstrap.Modal(document.getElementById('confirmarDispensacion'));
+    const resumenDiv = document.getElementById('resumen-dispensacion');
+    
+    // Interceptar envío del formulario
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Generar resumen
+        const medicamentos = [];
+        const cantidadInputs = document.querySelectorAll('input[name^="cantidad_"]');
+        
+        cantidadInputs.forEach(input => {
+            const cantidad = parseInt(input.value) || 0;
+            if (cantidad > 0) {
+                const medicamentoCard = input.closest('.medicamento-dispensar');
+                const nombreMedicamento = medicamentoCard.querySelector('h6').textContent;
+                medicamentos.push({
+                    nombre: nombreMedicamento,
+                    cantidad: cantidad
+                });
+            }
+        });
+        
+        if (medicamentos.length === 0) {
+            alert('Debe ingresar al menos una cantidad a dispensar');
+            return;
+        }
+        
+        // Crear resumen
+        let resumenHTML = '<h6>Medicamentos a dispensar:</h6><ul>';
+        medicamentos.forEach(med => {
+            resumenHTML += `<li><strong>${med.nombre}</strong>: ${med.cantidad} unidad${med.cantidad !== 1 ? 'es' : ''}</li>`;
+        });
+        resumenHTML += '</ul>';
+        
+        resumenDiv.innerHTML = resumenHTML;
+        
+        // Mostrar modal
+        confirmarModal.show();
+    });
+    
+    // Confirmar dispensación
+    document.getElementById('confirmarDispensacionBtn').addEventListener('click', function() {
+        form.submit();
+    });
+    
+    // Validar cantidades en tiempo real
+    const cantidadInputs = document.querySelectorAll('input[name^="cantidad_"]');
+    cantidadInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            const max = parseInt(this.getAttribute('max'));
+            const value = parseInt(this.value);
+            
+            if (value > max) {
+                this.value = max;
+                this.classList.add('is-invalid');
+                
+                // Mostrar alerta temporal
+                const alert = this.parentElement.querySelector('.alert-danger');
+                if (!alert) {
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-danger alert-dismissible fade show mt-2';
+                    alertDiv.innerHTML = `
+                        <small>
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            Cantidad excede el stock disponible
+                        </small>
+                    `;
+                    this.parentElement.appendChild(alertDiv);
+                    
+                    setTimeout(() => {
+                        alertDiv.remove();
+                        this.classList.remove('is-invalid');
+                    }, 3000);
+                }
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+    });
+});
+</script>
+{% endblock %} 

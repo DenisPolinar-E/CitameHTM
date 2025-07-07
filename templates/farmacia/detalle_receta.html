@@ -1,0 +1,365 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Detalle Receta {{ receta.codigo_receta }} - Farmacia{% endblock %}
+
+{% block page_title %}Detalle de Receta{% endblock %}
+
+{% block sidebar_menu %}
+<a href="{% url 'dashboard_farmacia' %}" class="menu-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="{% url 'recetas_pendientes' %}" class="menu-item"><i class="fas fa-prescription"></i> Recetas Pendientes</a>
+<a href="{% url 'inventario_medicamentos' %}" class="menu-item"><i class="fas fa-pills"></i> Inventario</a>
+<a href="{% url 'alertas_farmacia' %}" class="menu-item"><i class="fas fa-exclamation-triangle"></i> Alertas</a>
+<a href="{% url 'perfil_admin' %}" class="menu-item"><i class="fas fa-user"></i> Mi Perfil</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .receta-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .paciente-info {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        border-left: 4px solid #28a745;
+    }
+    
+    .medico-info {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        border-left: 4px solid #007bff;
+    }
+    
+    .medicamento-card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        background: white;
+        transition: all 0.3s ease;
+    }
+    
+    .medicamento-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    
+    .stock-badge {
+        font-size: 0.9em;
+        padding: 5px 10px;
+    }
+    
+    .urgente-badge {
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header de la receta -->
+    <div class="receta-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h3 class="mb-0">
+                    <i class="fas fa-prescription-bottle-alt me-2"></i>
+                    Receta {{ receta.codigo_receta }}
+                    {% if receta.urgente %}
+                        <span class="badge bg-danger ms-2 urgente-badge">URGENTE</span>
+                    {% endif %}
+                </h3>
+                <p class="mb-0 mt-2">
+                    <i class="fas fa-calendar me-2"></i>
+                    Prescrita el {{ receta.fecha_prescripcion|date:"d/m/Y" }} a las {{ receta.fecha_prescripcion|date:"H:i" }}
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{% url 'recetas_pendientes' %}" class="btn btn-light">
+                        <i class="fas fa-arrow-left me-2"></i>Volver
+                    </a>
+                    {% if receta.estado != 'dispensada' %}
+                    <a href="{% url 'dispensar_receta' receta.id %}" class="btn btn-success">
+                        <i class="fas fa-check me-2"></i>Dispensar
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Información del Paciente -->
+        <div class="col-md-6 mb-4">
+            <div class="paciente-info">
+                <h5 class="mb-3">
+                    <i class="fas fa-user me-2"></i>
+                    Información del Paciente
+                </h5>
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <strong>Nombre Completo:</strong><br>
+                        <span class="fs-5">{{ receta.paciente.usuario.nombres }} {{ receta.paciente.usuario.apellidos }}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>DNI:</strong><br>
+                        <span class="text-primary fw-bold">{{ receta.paciente.usuario.dni }}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Edad:</strong><br>
+                        {{ receta.paciente.edad }} años
+                    </div>
+                    <div class="col-md-6 mt-2">
+                        <strong>Género:</strong><br>
+                        {{ receta.paciente.usuario.sexo }}
+                    </div>
+                    <div class="col-md-6 mt-2">
+                        <strong>Teléfono:</strong><br>
+                        {{ receta.paciente.usuario.telefono|default:"No registrado" }}
+                    </div>
+                    <div class="col-12 mt-2">
+                        <strong>Dirección:</strong><br>
+                        {{ receta.paciente.usuario.direccion|default:"No registrada" }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Información del Médico -->
+        <div class="col-md-6 mb-4">
+            <div class="medico-info">
+                <h5 class="mb-3">
+                    <i class="fas fa-user-md me-2"></i>
+                    Médico Prescriptor
+                </h5>
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <strong>Nombre:</strong><br>
+                        <span class="fs-5">Dr. {{ receta.medico.usuario.nombres }} {{ receta.medico.usuario.apellidos }}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Especialidad:</strong><br>
+                        {{ receta.medico.especialidad.nombre }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>CMP:</strong><br>
+                        {{ receta.medico.cmp }}
+                    </div>
+                    <div class="col-12 mt-2">
+                        <strong>Observaciones del Médico:</strong><br>
+                        <div class="bg-white p-2 rounded border">
+                            {{ receta.observaciones_medico|default:"Sin observaciones adicionales" }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información de Sesión de Seguimiento -->
+    {% if receta.sesion_seguimiento %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-notes-medical me-2"></i>
+                        Información de Sesión de Seguimiento
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Tratamiento:</strong><br>
+                            {{ receta.sesion_seguimiento.tratamiento.diagnostico }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Sesión:</strong><br>
+                            Sesión {{ receta.sesion_seguimiento.numero_sesion }} de {{ receta.sesion_seguimiento.tratamiento.cantidad_sesiones }}
+                        </div>
+                        <div class="col-12 mt-2">
+                            <strong>Síntomas Actuales:</strong><br>
+                            {{ receta.sesion_seguimiento.sintomas_actuales|default:"No reportados" }}
+                        </div>
+                        <div class="col-12 mt-2">
+                            <strong>Mejorías Observadas:</strong><br>
+                            {{ receta.sesion_seguimiento.mejoria_observada|default:"No reportadas" }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Medicamentos Prescritos -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-pills me-2"></i>
+                        Medicamentos Prescritos ({{ receta.detalles.count }} medicamento{{ receta.detalles.count|pluralize }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for detalle in receta.detalles.all %}
+                    <div class="medicamento-card">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <h6 class="text-primary mb-2">{{ detalle.medicamento.nombre_comercial }}</h6>
+                                <p class="mb-1">
+                                    <strong>Principio Activo:</strong> {{ detalle.medicamento.nombre_generico }}<br>
+                                    <strong>Concentración:</strong> {{ detalle.medicamento.concentracion }}<br>
+                                    <strong>Forma:</strong> {{ detalle.medicamento.forma_farmaceutica }}
+                                </p>
+                                <small class="text-muted">
+                                    <i class="fas fa-industry me-1"></i>{{ detalle.medicamento.laboratorio }} | 
+                                    <i class="fas fa-barcode me-1"></i>{{ detalle.medicamento.codigo }}
+                                </small>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <span class="badge stock-badge {{ detalle.medicamento|stock_class }}">
+                                        Stock: {{ detalle.medicamento.stock_actual }}
+                                    </span>
+                                    <div class="mt-2">
+                                        <strong>Cantidad Prescrita:</strong><br>
+                                        <span class="fs-5 text-primary">{{ detalle.cantidad_prescrita }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="bg-light p-3 rounded">
+                                    <strong>Posología:</strong><br>
+                                    <strong>Dosis:</strong> {{ detalle.dosis }}<br>
+                                    <strong>Frecuencia:</strong> {{ detalle.frecuencia }}<br>
+                                    <strong>Duración:</strong> {{ detalle.duracion_dias }} días
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <div class="bg-primary text-white p-2 rounded">
+                                    <strong>Instrucciones:</strong><br>
+                                    {{ detalle.instrucciones }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Estado de dispensación -->
+                        {% if detalle.cantidad_dispensada > 0 %}
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <div class="alert alert-info mb-0">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Dispensado:</strong> {{ detalle.cantidad_dispensada }} de {{ detalle.cantidad_prescrita }}
+                                    {% if detalle.lote %}
+                                    | <strong>Lote:</strong> {{ detalle.lote }}
+                                    {% endif %}
+                                    {% if detalle.fecha_dispensacion %}
+                                    | <strong>Fecha:</strong> {{ detalle.fecha_dispensacion|date:"d/m/Y H:i" }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estado de la Receta -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Estado de la Receta
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <strong>Estado Actual:</strong><br>
+                            {% if receta.estado == 'pendiente' %}
+                                <span class="badge bg-warning fs-6">Pendiente</span>
+                            {% elif receta.estado == 'parcial' %}
+                                <span class="badge bg-info fs-6">Parcialmente Dispensada</span>
+                            {% elif receta.estado == 'dispensada' %}
+                                <span class="badge bg-success fs-6">Completamente Dispensada</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Fecha Prescripción:</strong><br>
+                            {{ receta.fecha_prescripcion|date:"d/m/Y H:i" }}
+                        </div>
+                        {% if receta.fecha_dispensacion %}
+                        <div class="col-md-3">
+                            <strong>Fecha Dispensación:</strong><br>
+                            {{ receta.fecha_dispensacion|date:"d/m/Y H:i" }}
+                        </div>
+                        {% endif %}
+                        {% if receta.farmaceutico %}
+                        <div class="col-md-3">
+                            <strong>Farmacéutico:</strong><br>
+                            {{ receta.farmaceutico.nombres }} {{ receta.farmaceutico.apellidos }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botones de Acción -->
+    <div class="row mt-4">
+        <div class="col-12 text-center">
+            <div class="btn-group" role="group">
+                <a href="{% url 'recetas_pendientes' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Volver a Recetas
+                </a>
+                {% if receta.estado != 'dispensada' %}
+                <a href="{% url 'dispensar_receta' receta.id %}" class="btn btn-success">
+                    <i class="fas fa-check me-2"></i>Dispensar Receta
+                </a>
+                {% endif %}
+                <button class="btn btn-primary" onclick="window.print()">
+                    <i class="fas fa-print me-2"></i>Imprimir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Mostrar alertas para medicamentos con stock bajo
+    const stockBadges = document.querySelectorAll('.stock-badge');
+    stockBadges.forEach(badge => {
+        if (badge.classList.contains('bg-danger')) {
+            badge.closest('.medicamento-card').style.borderColor = '#dc3545';
+        }
+    });
+});
+</script>
+{% endblock %} 
