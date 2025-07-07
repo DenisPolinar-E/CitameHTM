@@ -1752,10 +1752,14 @@ def api_tasas_asistencia(request):
 def reporte_consumo_medicamentos(request):
     if not request.user.is_authenticated or not user_is_admin(request.user):
         return render(request, '403.html')
+    
     filtro = request.GET.get('filtro', 'mes')
     periodo = request.GET.get('periodo')
+    tipo_ranking = request.GET.get('tipo_ranking', 'mas_consumidos')
+    
     hoy = datetime.now()
     qs = DetalleReceta.objects.select_related('medicamento', 'receta')
+    
     if filtro == 'mes' and periodo:
         anio, mes = map(int, periodo.split('-'))
         qs = qs.filter(receta__fecha_prescripcion__year=anio, receta__fecha_prescripcion__month=mes)
@@ -1766,11 +1770,21 @@ def reporte_consumo_medicamentos(request):
     elif filtro == 'anio' and periodo:
         anio = int(periodo)
         qs = qs.filter(receta__fecha_prescripcion__year=anio)
-    top = (qs.values('medicamento__nombre_comercial')
-             .annotate(total=Sum('cantidad_prescrita'))
-             .order_by('-total')[:10])
+    
+    # Aplicar orden según el tipo de ranking
+    if tipo_ranking == 'mas_consumidos':
+        top = (qs.values('medicamento__nombre_comercial')
+                 .annotate(total=Sum('cantidad_prescrita'))
+                 .order_by('-total')[:10])
+    else:  # menos_consumidos
+        top = (qs.values('medicamento__nombre_comercial')
+                 .annotate(total=Sum('cantidad_prescrita'))
+                 .filter(total__gt=0)  # Solo medicamentos con consumo > 0
+                 .order_by('total')[:10])
+    
     labels = [x['medicamento__nombre_comercial'] for x in top]
     data = [x['total'] for x in top]
+    
     return JsonResponse({'labels': labels, 'data': data})
 
 def admin_reporte_consumo_medicamentos(request):

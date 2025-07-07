@@ -3,7 +3,14 @@
 <div class="container py-4">
     <h2 class="mb-4"><i class="fa fa-pills me-2"></i>Consumo de Medicamentos</h2>
     <div class="row mb-3 align-items-end">
-        <div class="col-md-3">
+        <div class="col-md-2">
+            <label for="tipo_ranking" class="form-label">Tipo de ranking:</label>
+            <select id="tipo_ranking" class="form-select">
+                <option value="mas_consumidos">Top 10 Más Consumidos</option>
+                <option value="menos_consumidos">Top 10 Menos Consumidos</option>
+            </select>
+        </div>
+        <div class="col-md-2">
             <label for="filtro" class="form-label">Filtrar por:</label>
             <select id="filtro" class="form-select">
                 <option value="mes">Mes</option>
@@ -11,7 +18,7 @@
                 <option value="anio">Año</option>
             </select>
         </div>
-        <div class="col-md-3" id="filtro_mes">
+        <div class="col-md-2" id="filtro_mes">
             <label for="periodo_mes" class="form-label">Mes:</label>
             <input type="month" id="periodo_mes" class="form-control" value="{{ now|date:'Y-m' }}">
         </div>
@@ -26,7 +33,7 @@
             <label for="anio_trimestre" class="form-label mt-2">Año:</label>
             <input type="number" id="anio_trimestre" class="form-control" min="2000" max="2100" value="{{ now|date:'Y' }}">
         </div>
-        <div class="col-md-3 d-none" id="filtro_anio">
+        <div class="col-md-2 d-none" id="filtro_anio">
             <label for="periodo_anio" class="form-label">Año:</label>
             <input type="number" id="periodo_anio" class="form-control" min="2000" max="2100" value="{{ now|date:'Y' }}">
         </div>
@@ -57,13 +64,21 @@
 <script>
 function obtenerPeriodo() {
     const filtro = $('#filtro').val();
+    const tipoRanking = $('#tipo_ranking').val();
+    let params = {tipo_ranking: tipoRanking};
+    
     if (filtro === 'mes') {
-        return {filtro: 'mes', periodo: $('#periodo_mes').val()};
+        params.filtro = 'mes';
+        params.periodo = $('#periodo_mes').val();
     } else if (filtro === 'trimestre') {
-        return {filtro: 'trimestre', periodo: $('#anio_trimestre').val() + '-' + $('#periodo_trimestre').val()};
+        params.filtro = 'trimestre';
+        params.periodo = $('#anio_trimestre').val() + '-' + $('#periodo_trimestre').val();
     } else if (filtro === 'anio') {
-        return {filtro: 'anio', periodo: $('#periodo_anio').val()};
+        params.filtro = 'anio';
+        params.periodo = $('#periodo_anio').val();
     }
+    
+    return params;
 }
 function mostrarSpinner(mostrar) {
     $('#spinnerCarga').toggle(mostrar);
@@ -79,6 +94,11 @@ function cargarGrafico() {
             $('#mensajeSinDatos').show();
             return;
         }
+        const tipoRanking = $('#tipo_ranking').val();
+        const tituloGrafico = tipoRanking === 'mas_consumidos' ? 
+            'Top 10 medicamentos más consumidos' : 
+            'Top 10 medicamentos menos consumidos';
+        
         window.graficoConsumo = new Chart(document.getElementById('grafico_consumo'), {
             type: 'bar',
             data: {
@@ -86,8 +106,10 @@ function cargarGrafico() {
                 datasets: [{
                     label: 'Cantidad consumida',
                     data: resp.data,
-                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
+                    backgroundColor: tipoRanking === 'mas_consumidos' ? 
+                        'rgba(54, 162, 235, 0.7)' : 'rgba(255, 99, 132, 0.7)',
+                    borderColor: tipoRanking === 'mas_consumidos' ? 
+                        'rgba(54, 162, 235, 1)' : 'rgba(255, 99, 132, 1)',
                     borderWidth: 2
                 }]
             },
@@ -97,7 +119,7 @@ function cargarGrafico() {
                     legend: { display: false },
                     title: {
                         display: true,
-                        text: 'Top 10 medicamentos más consumidos'
+                        text: tituloGrafico
                     }
                 },
                 scales: {
@@ -118,6 +140,10 @@ $(function() {
         if(this.value === 'trimestre') $('#filtro_trimestre').removeClass('d-none');
         if(this.value === 'anio') $('#filtro_anio').removeClass('d-none');
     });
+    
+    // Evento para cambiar tipo de ranking
+    $('#tipo_ranking').change(cargarGrafico);
+    
     $('#btnBuscar').click(cargarGrafico);
     $('#periodo_mes, #periodo_trimestre, #anio_trimestre, #periodo_anio').on('keydown', function(e) {
         if(e.key === 'Enter') cargarGrafico();
