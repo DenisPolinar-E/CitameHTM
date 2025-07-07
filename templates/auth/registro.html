@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="{% static 'css/registro.css' %}">
 <style>
     .registro-title {
-        font-size: 2.4rem;
+        font-size: 1.8rem;
         font-weight: 800;
         color: var(--primary-color);
         display: flex;
@@ -18,12 +18,12 @@
         margin-bottom: 0.7em;
     }
     .registro-form {
-        max-width: 800px;
+        max-width: 600px;
         margin: 0 auto;
         background: #fff;
         border-radius: 24px;
         box-shadow: var(--shadow-2xl);
-        padding: 3.5rem 3rem 2.5rem 3rem;
+        padding: 2.5rem 2rem 2rem 2rem;
         position: relative;
         z-index: 1;
     }
@@ -36,7 +36,7 @@
         border: 1px solid var(--gray-200);
     }
     .form-section-title {
-        font-size: 1.5rem;
+        font-size: 1.15rem;
         font-weight: 700;
         color: var(--primary-color);
         margin-bottom: 1.5rem;
@@ -57,12 +57,12 @@
         font-weight: 600;
         color: var(--gray-700);
         margin-bottom: 0.4rem;
-        font-size: 1.08rem;
+        font-size: 1rem;
     }
     .form-control, .form-select {
-        min-height: 54px;
-        font-size: 1.12rem;
-        border-radius: 12px;
+        min-height: 44px;
+        font-size: 1rem;
+        border-radius: 10px;
         border: 1.5px solid var(--gray-200);
         box-shadow: none;
         transition: border-color 0.2s, box-shadow 0.2s;
@@ -115,7 +115,7 @@
 {% endblock %}
 
 {% block auth_content %}
-<form method="post" action="{% url 'registro' %}" class="registro-form">
+<form method="post" action="{% url 'registro' %}">
     {% csrf_token %}
     <!-- Información Personal -->
     <div class="form-section">
