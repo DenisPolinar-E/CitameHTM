@@ -1,0 +1,61 @@
+name: Django CI
+
+on:
+  push:
+    branches: [main, Denis]  # Agrega las ramas que quieras monitorear
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: denis
+          POSTGRES_DB: CitaMe
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13.5'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install coverage
+
+    - name: Run migrations
+      env:
+        DB_NAME: CitaMe
+        DB_USER: postgres
+        DB_PASSWORD: denis
+        DB_HOST: localhost
+        DB_PORT: 5432
+      run: python manage.py migrate
+
+    - name: Run tests with coverage
+      env:
+        DB_NAME: CitaMe
+        DB_USER: postgres
+        DB_PASSWORD: denis
+        DB_HOST: localhost
+        DB_PORT: 5432
+      run: |
+        coverage run manage.py test
+        coverage report -m
+

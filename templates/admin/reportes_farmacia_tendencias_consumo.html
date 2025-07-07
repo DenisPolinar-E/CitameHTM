@@ -1,0 +1,148 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4"><i class="fa fa-chart-line me-2 text-primary"></i>Tendencias de Consumo de Medicamentos</h2>
+    <div class="row mb-3 align-items-end">
+        <div class="col-md-3">
+            <label for="filtro" class="form-label">Filtrar por:</label>
+            <select id="filtro" class="form-select">
+                <option value="mes">Mes</option>
+                <option value="trimestre">Trimestre</option>
+                <option value="anio">Año</option>
+            </select>
+        </div>
+        <div class="col-md-3" id="filtro_mes">
+            <label for="periodo_mes" class="form-label">Año:</label>
+            <input type="number" id="periodo_mes" class="form-control" min="2000" max="2100" value="{{ now|date:'Y' }}">
+        </div>
+        <div class="col-md-3 d-none" id="filtro_trimestre">
+            <label for="periodo_trimestre" class="form-label">Año:</label>
+            <input type="number" id="periodo_trimestre" class="form-control" min="2000" max="2100" value="{{ now|date:'Y' }}">
+        </div>
+        <div class="col-md-3 d-none" id="filtro_anio">
+            <label for="periodo_anio" class="form-label">Año final:</label>
+            <input type="number" id="periodo_anio" class="form-control" min="2000" max="2100" value="{{ now|date:'Y' }}">
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button id="btnBuscar" class="btn btn-primary w-100" type="button">
+                <i class="fa fa-search me-1"></i> Buscar
+            </button>
+        </div>
+    </div>
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white"><i class="fa fa-chart-line me-2"></i>Evolución del Consumo</div>
+        <div class="card-body">
+            <canvas id="grafico_tendencias" height="120"></canvas>
+        </div>
+    </div>
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light"><i class="fa fa-table me-2"></i>Consumo Histórico por Medicamento</div>
+        <div class="card-body p-2">
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered align-middle mb-0">
+                    <thead class="table-light" id="thead_periodos">
+                        <tr><th>Medicamento</th><th>...</th></tr>
+                    </thead>
+                    <tbody id="tabla_tendencias">
+                        <tr><td colspan="10" class="text-center text-muted">Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="/static/js/chart.js"></script>
+<script>
+function obtenerPeriodo() {
+    const filtro = $('#filtro').val();
+    if (filtro === 'mes') {
+        return {filtro: 'mes', periodo: $('#periodo_mes').val()+'-01'};
+    } else if (filtro === 'trimestre') {
+        return {filtro: 'trimestre', periodo: $('#periodo_trimestre').val()};
+    } else if (filtro === 'anio') {
+        return {filtro: 'anio', periodo: $('#periodo_anio').val()};
+    }
+}
+function cargarTendencias() {
+    const params = obtenerPeriodo();
+    $.getJSON(window.location.pathname, params, function(resp) {
+        // Gráfica de líneas
+        if(window.graficoTendencias) window.graficoTendencias.destroy();
+        let datasets = [];
+        let colors = [
+            'rgba(54, 162, 235, 1)',
+            'rgba(255, 99, 132, 1)',
+            'rgba(255, 206, 86, 1)',
+            'rgba(75, 192, 192, 1)',
+            'rgba(153, 102, 255, 1)',
+            'rgba(255, 159, 64, 1)',
+            'rgba(99, 255, 132, 1)'
+        ];
+        resp.meds.forEach(function(med, i) {
+            datasets.push({
+                label: med,
+                data: resp.data[med],
+                borderColor: colors[i%colors.length],
+                backgroundColor: colors[i%colors.length],
+                fill: false,
+                tension: 0.2
+            });
+        });
+        window.graficoTendencias = new Chart(document.getElementById('grafico_tendencias'), {
+            type: 'line',
+            data: {
+                labels: resp.periodos,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    title: {
+                        display: true,
+                        text: 'Tendencias de consumo de medicamentos'
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: resp.periodo_label } },
+                    y: { title: { display: true, text: 'Cantidad dispensada' }, beginAtZero: true }
+                }
+            }
+        });
+        // Tabla
+        let thead = '<tr><th>Medicamento</th>';
+        resp.periodos.forEach(function(p) { thead += `<th>${p}</th>`; });
+        thead += '</tr>';
+        $('#thead_periodos').html(thead);
+        let filas = '';
+        if(resp.meds.length === 0) {
+            filas = '<tr><td colspan="10" class="text-center text-success">No hay datos para mostrar.</td></tr>';
+        } else {
+            resp.meds.forEach(function(med) {
+                filas += `<tr><td>${med}</td>`;
+                resp.periodos.forEach(function(p, i) {
+                    filas += `<td>${resp.tabla[med][i] || 0}</td>`;
+                });
+                filas += '</tr>';
+            });
+        }
+        $('#tabla_tendencias').html(filas);
+    });
+}
+$(function() {
+    $('#filtro').change(function() {
+        $('#filtro_mes, #filtro_trimestre, #filtro_anio').addClass('d-none');
+        if(this.value === 'mes') $('#filtro_mes').removeClass('d-none');
+        if(this.value === 'trimestre') $('#filtro_trimestre').removeClass('d-none');
+        if(this.value === 'anio') $('#filtro_anio').removeClass('d-none');
+    });
+    $('#btnBuscar').click(cargarTendencias);
+    $('#periodo_mes, #periodo_trimestre, #periodo_anio').on('keydown', function(e) {
+        if(e.key === 'Enter') cargarTendencias();
+    });
+    cargarTendencias();
+});
+</script>
+{% endblock %} 

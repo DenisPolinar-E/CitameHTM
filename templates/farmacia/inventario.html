@@ -1,0 +1,743 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Inventario de Medicamentos - CitaMe{% endblock %}
+
+{% block page_title %}Inventario de Medicamentos{% endblock %}
+
+{% block sidebar_menu %}
+<a href="{% url 'dashboard_farmacia' %}" class="menu-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="{% url 'recetas_pendientes' %}" class="menu-item"><i class="fas fa-prescription"></i> Recetas Pendientes</a>
+
+<!-- Menú expandible de Inventario -->
+<div class="menu-item dropdown-menu-item">
+    <a href="#" class="menu-item-toggle active"><i class="fas fa-boxes"></i> Inventario <i class="fas fa-chevron-down"></i></a>
+    <div class="submenu active">
+        <a href="{% url 'inventario_medicamentos' %}" class="submenu-item active"><i class="fas fa-pills"></i> Ver Inventario</a>
+        <a href="{% url 'entrada_medicamentos' %}" class="submenu-item"><i class="fas fa-plus-circle"></i> Entrada de Medicamentos</a>
+        <a href="{% url 'ajuste_inventario' %}" class="submenu-item"><i class="fas fa-adjust"></i> Ajuste de Stock</a>
+        <a href="{% url 'historial_movimientos' %}" class="submenu-item"><i class="fas fa-history"></i> Historial de Movimientos</a>
+        <a href="{% url 'reporte_inventario' %}" class="submenu-item"><i class="fas fa-chart-bar"></i> Reporte de Inventario</a>
+    </div>
+</div>
+
+<a href="{% url 'alertas_farmacia' %}" class="menu-item"><i class="fas fa-exclamation-triangle"></i> Alertas</a>
+<a href="{% url 'perfil_admin' %}" class="menu-item"><i class="fas fa-user"></i> Mi Perfil</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s;
+    }
+
+    .card:hover {
+        transform: translateY(-2px);
+    }
+
+    .stock-badge {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+
+    .stock-critico {
+        background-color: #ff4757;
+        color: white;
+    }
+
+    .stock-bajo {
+        background-color: #ffa726;
+        color: white;
+    }
+
+    .stock-normal {
+        background-color: #26de81;
+        color: white;
+    }
+
+    .btn-group-custom {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .medicamento-card {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .medicamento-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .filter-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+    }
+
+    .search-input {
+        border: none;
+        border-radius: 25px;
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .select-custom {
+        border: none;
+        border-radius: 25px;
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        background-color: white;
+    }
+
+    .btn-custom {
+        border-radius: 25px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+
+    .btn-primary-custom {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+    }
+
+    .btn-primary-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .inventory-actions {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    @media (max-width: 768px) {
+        .inventory-actions {
+            flex-direction: column;
+        }
+        
+        .btn-group-custom {
+            flex-wrap: wrap;
+        }
+    }
+    
+    /* Estilos para menú expandible */
+    .dropdown-menu-item {
+        position: relative;
+    }
+    
+    .menu-item-toggle {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 20px;
+        color: #fff;
+        text-decoration: none;
+        border-radius: 8px;
+        margin-bottom: 5px;
+        transition: all 0.3s ease;
+    }
+    
+    .menu-item-toggle:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        text-decoration: none;
+    }
+    
+    .menu-item-toggle.active {
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+    
+    .submenu {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        margin-bottom: 5px;
+    }
+    
+    .submenu.active {
+        max-height: 300px;
+    }
+    
+    .submenu-item {
+        display: block;
+        padding: 10px 20px 10px 40px;
+        color: #fff;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        border-radius: 6px;
+        margin: 3px 10px;
+    }
+    
+    .submenu-item:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        text-decoration: none;
+        transform: translateX(5px);
+    }
+    
+    .submenu-item.active {
+        background-color: rgba(255, 255, 255, 0.2);
+        font-weight: 600;
+    }
+    
+    .submenu-item i {
+        width: 20px;
+        text-align: center;
+        margin-right: 8px;
+    }
+    
+    .menu-item-toggle i.fa-chevron-down {
+        transition: transform 0.3s ease;
+    }
+    
+    .menu-item-toggle.active i.fa-chevron-down {
+        transform: rotate(180deg);
+    }
+    
+    /* Estilos para paginación visible y clara */
+    .pagination-container {
+        background: #ffffff;
+        border-radius: 15px;
+        padding: 25px;
+        margin-top: 2rem;
+        border: 2px solid #e0e0e0;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+    
+    .pagination-info-custom {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .pagination-info-custom .badge {
+        font-size: 1.1rem;
+        padding: 12px 20px;
+        border-radius: 25px;
+        font-weight: 600;
+        background: #007bff;
+        color: #ffffff;
+        border: none;
+    }
+    
+    .pagination-info-custom .text-light {
+        color: #495057 !important;
+        font-size: 1rem;
+        font-weight: 500;
+    }
+    
+    .pagination-custom .page-link-custom {
+        background: #ffffff;
+        border: 2px solid #007bff;
+        color: #007bff;
+        padding: 12px 18px;
+        margin: 0 5px;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        font-weight: 700;
+        font-size: 1.1rem;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 50px;
+        height: 50px;
+    }
+    
+    .pagination-custom .page-link-custom:hover {
+        background: #007bff;
+        color: #ffffff;
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0, 123, 255, 0.3);
+        text-decoration: none;
+    }
+    
+    .pagination-custom .page-item.active .page-link-custom.active-page {
+        background: #007bff;
+        border-color: #007bff;
+        color: #ffffff;
+        box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.25);
+        transform: scale(1.15);
+        font-weight: 700;
+        font-size: 1.2rem;
+    }
+    
+    .pagination-custom .page-item.disabled .page-link-custom {
+        background: #f8f9fa;
+        border-color: #dee2e6;
+        color: #6c757d;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+    
+    .pagination-custom .page-item.disabled .page-link-custom:hover {
+        transform: none;
+        box-shadow: none;
+        background: #f8f9fa;
+        color: #6c757d;
+    }
+    
+    .quick-nav-container {
+        text-align: center;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 2px solid #e0e0e0;
+    }
+    
+    .quick-nav-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+    
+    .quick-nav-buttons .btn {
+        background: #28a745;
+        border: 2px solid #28a745;
+        color: #ffffff;
+        padding: 12px 25px;
+        border-radius: 30px;
+        font-weight: 600;
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    }
+    
+    .quick-nav-buttons .btn:hover {
+        background: #218838;
+        border-color: #218838;
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        color: #ffffff;
+        text-decoration: none;
+    }
+    
+    @media (max-width: 768px) {
+        .pagination-container {
+            padding: 20px;
+        }
+        
+        .pagination-custom {
+            justify-content: center;
+        }
+        
+        .pagination-custom .page-link-custom {
+            padding: 10px 14px;
+            font-size: 1rem;
+            font-weight: 600;
+            min-width: 45px;
+            height: 45px;
+        }
+        
+        .pagination-info-custom {
+            justify-content: center;
+            text-align: center;
+        }
+        
+        .pagination-info-custom .badge {
+            font-size: 1rem;
+            padding: 10px 16px;
+        }
+        
+        .pagination-info-custom .text-light {
+            font-size: 0.9rem;
+        }
+        
+        .quick-nav-buttons {
+            flex-direction: row;
+            justify-content: center;
+        }
+        
+        .quick-nav-buttons .btn {
+            width: 130px;
+            font-size: 1rem;
+            padding: 10px 20px;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .pagination-custom .page-link-custom {
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            min-width: 40px;
+            height: 40px;
+        }
+        
+        .pagination-info-custom .badge {
+            font-size: 0.9rem;
+            padding: 8px 14px;
+        }
+        
+        .pagination-info-custom .text-light {
+            font-size: 0.8rem;
+        }
+        
+        .quick-nav-buttons {
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .quick-nav-buttons .btn {
+            width: 140px;
+            font-size: 0.9rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Acciones rápidas -->
+    <div class="inventory-actions mb-4">
+        <a href="{% url 'entrada_medicamentos' %}" class="btn btn-success btn-custom">
+            <i class="fas fa-plus"></i> Entrada
+        </a>
+        <a href="{% url 'ajuste_inventario' %}" class="btn btn-warning btn-custom">
+            <i class="fas fa-adjust"></i> Ajuste
+        </a>
+        <a href="{% url 'historial_movimientos' %}" class="btn btn-info btn-custom">
+            <i class="fas fa-history"></i> Historial
+        </a>
+        <a href="{% url 'reporte_inventario' %}" class="btn btn-secondary btn-custom">
+            <i class="fas fa-chart-bar"></i> Reporte
+        </a>
+    </div>
+
+            <!-- Filtros -->
+            <div class="filter-section">
+                <form method="get" class="row g-3">
+                    <div class="col-md-4">
+                        <input type="text" 
+                               class="form-control search-input" 
+                               name="busqueda" 
+                               placeholder="Buscar medicamento..."
+                               value="{{ busqueda }}">
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select select-custom" name="stock">
+                            <option value="">Todos los stocks</option>
+                            <option value="critico" {% if estado_stock == 'critico' %}selected{% endif %}>
+                                Stock Crítico
+                            </option>
+                            <option value="bajo" {% if estado_stock == 'bajo' %}selected{% endif %}>
+                                Stock Bajo
+                            </option>
+                            <option value="normal" {% if estado_stock == 'normal' %}selected{% endif %}>
+                                Stock Normal
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select select-custom" name="forma">
+                            <option value="">Todas las formas</option>
+                            {% for forma in formas_disponibles %}
+                                <option value="{{ forma }}" {% if forma_farmaceutica == forma %}selected{% endif %}>
+                                    {{ forma|title }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="btn-group-custom">
+                            <button type="submit" class="btn btn-primary-custom">
+                                <i class="fas fa-search"></i> Buscar
+                            </button>
+                            <a href="{% url 'inventario_medicamentos' %}" class="btn btn-outline-light">
+                                <i class="fas fa-times"></i> Limpiar
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Lista de medicamentos -->
+            <div class="row">
+                {% for medicamento in medicamentos %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card medicamento-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <h5 class="card-title mb-1">{{ medicamento.nombre_comercial }}</h5>
+                                    <p class="text-muted mb-0">{{ medicamento.nombre_generico }}</p>
+                                    <small class="text-secondary">{{ medicamento.codigo }}</small>
+                                </div>
+                                <div class="text-end">
+                                    {% if medicamento.stock_critico %}
+                                        <span class="stock-badge stock-critico">
+                                            <i class="fas fa-exclamation-triangle"></i> Crítico
+                                        </span>
+                                    {% elif medicamento.stock_actual <= medicamento.stock_minimo|add:medicamento.stock_minimo %}
+                                        <span class="stock-badge stock-bajo">
+                                            <i class="fas fa-exclamation"></i> Bajo
+                                        </span>
+                                    {% else %}
+                                        <span class="stock-badge stock-normal">
+                                            <i class="fas fa-check"></i> Normal
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="row text-center mb-3">
+                                <div class="col-4">
+                                    <div class="border-end">
+                                        <div class="h4 mb-0 text-primary">{{ medicamento.stock_actual }}</div>
+                                        <small class="text-muted">Actual</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="border-end">
+                                        <div class="h4 mb-0 text-warning">{{ medicamento.stock_minimo }}</div>
+                                        <small class="text-muted">Mínimo</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="h4 mb-0 text-success">S/. {{ medicamento.precio_unitario }}</div>
+                                    <small class="text-muted">Precio</small>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <small class="text-muted">Concentración:</small>
+                                    <div class="fw-bold">{{ medicamento.concentracion }}</div>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Forma:</small>
+                                    <div class="fw-bold">{{ medicamento.forma_farmaceutica|title }}</div>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <small class="text-muted">Laboratorio:</small>
+                                    <div class="fw-bold">{{ medicamento.laboratorio }}</div>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Vencimiento:</small>
+                                    <div class="fw-bold {% if medicamento.proximo_a_vencer %}text-danger{% endif %}">
+                                        {{ medicamento.fecha_vencimiento }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="progress mb-3" style="height: 8px;">
+                                {% with porcentaje=medicamento.stock_actual|floatformat:0 minimo=medicamento.stock_minimo|floatformat:0 %}
+                                    {% if medicamento.stock_actual <= medicamento.stock_minimo %}
+                                        <div class="progress-bar bg-danger" style="width: 100%"></div>
+                                    {% elif medicamento.stock_actual <= medicamento.stock_minimo|add:medicamento.stock_minimo %}
+                                        <div class="progress-bar bg-warning" style="width: 75%"></div>
+                                    {% else %}
+                                        <div class="progress-bar bg-success" style="width: 100%"></div>
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+
+                            <div class="btn-group-custom">
+                                <a href="{% url 'detalle_medicamento_inventario' medicamento.id %}" 
+                                   class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye"></i> Ver
+                                </a>
+                                <button type="button" 
+                                        class="btn btn-outline-success btn-sm"
+                                        onclick="modalEntrada({{ medicamento.id }}, '{{ medicamento.nombre_comercial }}')">
+                                    <i class="fas fa-plus"></i> Entrada
+                                </button>
+                                <button type="button" 
+                                        class="btn btn-outline-warning btn-sm"
+                                        onclick="modalAjuste({{ medicamento.id }}, '{{ medicamento.nombre_comercial }}', {{ medicamento.stock_actual }})">
+                                    <i class="fas fa-adjust"></i> Ajuste
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body text-center py-5">
+                            <i class="fas fa-box-open fa-4x text-muted mb-3"></i>
+                            <h4 class="text-muted">No se encontraron medicamentos</h4>
+                            <p class="text-muted">Intenta ajustar los filtros de búsqueda</p>
+                            <a href="{% url 'inventario_medicamentos' %}" class="btn btn-primary">
+                                Ver todos los medicamentos
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Paginación Mejorada -->
+            {% if page_obj.paginator.num_pages > 1 %}
+            <div class="pagination-container mt-5">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="pagination-info-custom">
+                            <span class="badge bg-primary fs-6">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                            </span>
+                            <span class="text-light ms-3">
+                                Mostrando {{ page_obj.start_index }} - {{ page_obj.end_index }} de {{ page_obj.paginator.count }} medicamentos
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <nav aria-label="Paginación de medicamentos" class="d-flex justify-content-end">
+                            <ul class="pagination pagination-custom mb-0">
+                                {% if page_obj.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link page-link-custom" href="?page=1{% if busqueda %}&busqueda={{ busqueda }}{% endif %}{% if estado_stock %}&stock={{ estado_stock }}{% endif %}{% if forma_farmaceutica %}&forma={{ forma_farmaceutica }}{% endif %}" title="Primera página">
+                                            <i class="fas fa-angle-double-left"></i>
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link page-link-custom" href="?page={{ page_obj.previous_page_number }}{% if busqueda %}&busqueda={{ busqueda }}{% endif %}{% if estado_stock %}&stock={{ estado_stock }}{% endif %}{% if forma_farmaceutica %}&forma={{ forma_farmaceutica }}{% endif %}" title="Página anterior">
+                                            <i class="fas fa-angle-left"></i>
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link page-link-custom">
+                                            <i class="fas fa-angle-double-left"></i>
+                                        </span>
+                                    </li>
+                                    <li class="page-item disabled">
+                                        <span class="page-link page-link-custom">
+                                            <i class="fas fa-angle-left"></i>
+                                        </span>
+                                    </li>
+                                {% endif %}
+                                
+                                {% for num in page_obj.paginator.page_range %}
+                                    {% if page_obj.number == num %}
+                                        <li class="page-item active">
+                                            <span class="page-link page-link-custom active-page">{{ num }}</span>
+                                        </li>
+                                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                        <li class="page-item">
+                                            <a class="page-link page-link-custom" href="?page={{ num }}{% if busqueda %}&busqueda={{ busqueda }}{% endif %}{% if estado_stock %}&stock={{ estado_stock }}{% endif %}{% if forma_farmaceutica %}&forma={{ forma_farmaceutica }}{% endif %}">{{ num }}</a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if page_obj.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link page-link-custom" href="?page={{ page_obj.next_page_number }}{% if busqueda %}&busqueda={{ busqueda }}{% endif %}{% if estado_stock %}&stock={{ estado_stock }}{% endif %}{% if forma_farmaceutica %}&forma={{ forma_farmaceutica }}{% endif %}" title="Página siguiente">
+                                            <i class="fas fa-angle-right"></i>
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link page-link-custom" href="?page={{ page_obj.paginator.num_pages }}{% if busqueda %}&busqueda={{ busqueda }}{% endif %}{% if estado_stock %}&stock={{ estado_stock }}{% endif %}{% if forma_farmaceutica %}&forma={{ forma_farmaceutica }}{% endif %}" title="Última página">
+                                            <i class="fas fa-angle-double-right"></i>
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link page-link-custom">
+                                            <i class="fas fa-angle-right"></i>
+                                        </span>
+                                    </li>
+                                    <li class="page-item disabled">
+                                        <span class="page-link page-link-custom">
+                                            <i class="fas fa-angle-double-right"></i>
+                                        </span>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+                
+                <!-- Navegación rápida adicional -->
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="quick-nav-container">
+                            <div class="quick-nav-buttons">
+                                {% if page_obj.has_previous %}
+                                    <a href="?page={{ page_obj.previous_page_number }}{% if busqueda %}&busqueda={{ busqueda }}{% endif %}{% if estado_stock %}&stock={{ estado_stock }}{% endif %}{% if forma_farmaceutica %}&forma={{ forma_farmaceutica }}{% endif %}" 
+                                       class="btn btn-outline-light btn-sm me-2">
+                                        <i class="fas fa-chevron-left me-1"></i>
+                                        Anterior
+                                    </a>
+                                {% endif %}
+                                
+                                {% if page_obj.has_next %}
+                                    <a href="?page={{ page_obj.next_page_number }}{% if busqueda %}&busqueda={{ busqueda }}{% endif %}{% if estado_stock %}&stock={{ estado_stock }}{% endif %}{% if forma_farmaceutica %}&forma={{ forma_farmaceutica }}{% endif %}" 
+                                       class="btn btn-outline-light btn-sm">
+                                        Siguiente
+                                        <i class="fas fa-chevron-right ms-1"></i>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+</div>
+
+<!-- Incluir modales reutilizables -->
+{% include 'farmacia/modales_inventario.html' %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function modalEntrada(medicamentoId, nombreMedicamento) {
+    document.getElementById('entrada_medicamento_id').value = medicamentoId;
+    document.getElementById('entrada_medicamento_nombre').value = nombreMedicamento;
+    new bootstrap.Modal(document.getElementById('modalEntrada')).show();
+}
+
+function modalAjuste(medicamentoId, nombreMedicamento, stockActual) {
+    document.getElementById('ajuste_medicamento_id').value = medicamentoId;
+    document.getElementById('ajuste_medicamento_nombre').value = nombreMedicamento;
+    document.getElementById('ajuste_stock_actual').value = stockActual + ' unidades';
+    new bootstrap.Modal(document.getElementById('modalAjuste')).show();
+}
+
+// Menú expandible
+document.addEventListener('DOMContentLoaded', function() {
+    const menuToggle = document.querySelector('.menu-item-toggle');
+    const submenu = document.querySelector('.submenu');
+    
+    if (menuToggle && submenu) {
+        menuToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Toggle active class
+            menuToggle.classList.toggle('active');
+            submenu.classList.toggle('active');
+        });
+    }
+});
+</script>
+{% endblock %} 

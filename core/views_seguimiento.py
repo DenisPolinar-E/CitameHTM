@@ -426,3 +426,215 @@ def api_sesiones_pendientes(request):
         })
     
     return JsonResponse({'sesiones': data})
+
+@login_required
+def api_buscar_medicamentos_prescripcion(request):
+    """API para buscar medicamentos disponibles para prescripción"""
+    if not request.user.rol or request.user.rol.nombre != 'Medico':
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+    
+    termino = request.GET.get('q', '')
+    forma = request.GET.get('forma', '')
+    
+    if len(termino) < 2:
+        return JsonResponse({'medicamentos': []})
+    
+    from .models import Medicamento
+    
+    # Filtrar medicamentos activos con stock
+    medicamentos = Medicamento.objects.filter(
+        activo=True,
+        stock_actual__gt=0
+    )
+    
+    # Aplicar filtro de búsqueda
+    medicamentos = medicamentos.filter(
+        Q(nombre_comercial__icontains=termino) |
+        Q(nombre_generico__icontains=termino) |
+        Q(codigo__icontains=termino) |
+        Q(laboratorio__icontains=termino)
+    )
+    
+    # Aplicar filtro de forma farmacéutica si se especifica
+    if forma:
+        medicamentos = medicamentos.filter(forma_farmaceutica__icontains=forma)
+    
+    # Limitar resultados
+    medicamentos = medicamentos.order_by('nombre_comercial')[:20]
+    
+    # Convertir a JSON
+    data = []
+    for med in medicamentos:
+        # Determinar estado del stock
+        stock_estado = 'normal'
+        if med.stock_actual <= med.stock_minimo:
+            stock_estado = 'critico'
+        elif med.stock_actual <= med.stock_minimo * 2:
+            stock_estado = 'bajo'
+        
+        data.append({
+            'id': med.id,
+            'codigo': med.codigo,
+            'nombre_comercial': med.nombre_comercial,
+            'nombre_generico': med.nombre_generico,
+            'concentracion': med.concentracion,
+            'forma_farmaceutica': med.forma_farmaceutica,
+            'laboratorio': med.laboratorio,
+            'stock_actual': med.stock_actual,
+            'stock_minimo': med.stock_minimo,
+            'precio_unitario': float(med.precio_unitario),
+            'stock_estado': stock_estado,
+            'controlado': med.controlado,
+            'fecha_vencimiento': med.fecha_vencimiento.strftime('%d/%m/%Y') if med.fecha_vencimiento else None
+        })
+    
+    return JsonResponse({'medicamentos': data})
+
+@login_required
+def atender_sesion_seguimiento(request, sesion_id):
+    """Vista especializada para atender sesiones de seguimiento con integración farmacológica"""
+    # Verificar que el usuario tenga el rol correcto (médico)
+    if not request.user.rol or request.user.rol.nombre != 'Medico':
+        messages.error(request, 'No tienes permiso para acceder a esta página')
+        return redirect('dashboard')
+    
+    # Obtener la sesión
+    sesion = get_object_or_404(SeguimientoSesion, id=sesion_id)
+    
+    # Verificar que el médico sea el asignado al tratamiento
+    if request.user.medico != sesion.tratamiento.medico:
+        messages.error(request, 'No eres el médico asignado a este tratamiento')
+        return redirect('dashboard')
+    
+    # Verificar que la sesión tenga una cita asociada
+    if not sesion.cita:
+        messages.error(request, 'Esta sesión no tiene una cita programada')
+        return redirect('detalle_seguimiento', tratamiento_id=sesion.tratamiento.id)
+    
+    # Verificar que la cita esté en estado válido para atención
+    if sesion.cita.estado not in ['pendiente', 'confirmada']:
+        messages.error(request, 'Esta cita no está en estado válido para atención')
+        return redirect('detalle_seguimiento', tratamiento_id=sesion.tratamiento.id)
+    
+    # Si es POST, procesar el formulario de atención
+    if request.method == 'POST':
+        observaciones = request.POST.get('observaciones', '')
+        evolucion = request.POST.get('evolucion', '')
+        
+        # Campos farmacológicos
+        sintomas_actuales = request.POST.get('sintomas_actuales', '')
+        mejoria_observada = request.POST.get('mejoria_observada', '')
+        requiere_ajuste_medicamentos = request.POST.get('requiere_ajuste_medicamentos') == 'on'
+        observaciones_farmacologicas = request.POST.get('observaciones_farmacologicas', '')
+        proxima_sesion_recomendada = request.POST.get('proxima_sesion_recomendada', 'on') == 'on'
+        observaciones_proxima_sesion = request.POST.get('observaciones_proxima_sesion', '')
+        
+        # Prescripción de medicamentos
+        prescribir_medicamentos = request.POST.get('prescribir_medicamentos') == 'on'
+        
+        if not evolucion:
+            messages.error(request, 'El campo de evolución es obligatorio')
+            return redirect('atender_sesion_seguimiento', sesion_id=sesion.id)
+        
+        # Actualizar los nuevos campos de la sesión
+        sesion.sintomas_actuales = sintomas_actuales
+        sesion.mejoria_observada = mejoria_observada
+        sesion.requiere_ajuste_medicamentos = requiere_ajuste_medicamentos
+        sesion.observaciones_farmacologicas = observaciones_farmacologicas
+        sesion.proxima_sesion_recomendada = proxima_sesion_recomendada
+        sesion.observaciones_proxima_sesion = observaciones_proxima_sesion
+        
+        # Crear receta si se prescribieron medicamentos
+        receta_creada = None
+        if prescribir_medicamentos:
+            from .models import RecetaMedica
+            
+            # Procesar medicamentos seleccionados
+            medicamentos_ids = request.POST.getlist('medicamentos')
+            
+            # Solo crear receta si hay medicamentos seleccionados
+            if medicamentos_ids:
+                receta_creada = RecetaMedica.objects.create(
+                    sesion_seguimiento=sesion,
+                    paciente=sesion.tratamiento.paciente,
+                    medico=sesion.tratamiento.medico,
+                    observaciones_medico=observaciones_farmacologicas if observaciones_farmacologicas else "Medicamentos prescritos en sesión de seguimiento",
+                    urgente=False  # Se puede ajustar según necesidad
+                )
+                sesion.receta_seguimiento = receta_creada
+                
+                # Procesar cada medicamento
+                for med_id in medicamentos_ids:
+                    if med_id:
+                        from .models import Medicamento, DetalleReceta
+                        try:
+                            medicamento = Medicamento.objects.get(id=med_id)
+                            cantidad = request.POST.get(f'cantidad_{med_id}', 1)
+                            dosis = request.POST.get(f'dosis_{med_id}', '')
+                            frecuencia = request.POST.get(f'frecuencia_{med_id}', '')
+                            duracion = request.POST.get(f'duracion_{med_id}', 7)
+                            instrucciones = request.POST.get(f'instrucciones_{med_id}', '')
+                            
+                            if dosis and frecuencia and instrucciones:
+                                DetalleReceta.objects.create(
+                                    receta=receta_creada,
+                                    medicamento=medicamento,
+                                    cantidad_prescrita=int(cantidad),
+                                    dosis=dosis,
+                                    frecuencia=frecuencia,
+                                    duracion_dias=int(duracion),
+                                    instrucciones=instrucciones
+                                )
+                        except (Medicamento.DoesNotExist, ValueError):
+                            continue
+        
+        # Marcar la sesión como completada
+        sesion.marcar_completada(observaciones=observaciones, evolucion=evolucion)
+        
+        # Marcar la cita como atendida
+        sesion.cita.estado = 'atendida'
+        sesion.cita.save()
+        
+        # Mensajes de éxito
+        if receta_creada:
+            messages.success(request, f'Sesión de seguimiento atendida exitosamente. Receta {receta_creada.codigo_receta} generada.')
+        else:
+            messages.success(request, 'Sesión de seguimiento atendida exitosamente')
+        
+        return redirect('detalle_seguimiento', tratamiento_id=sesion.tratamiento.id)
+    
+    # Obtener evoluciones anteriores del tratamiento
+    evoluciones_anteriores = SeguimientoSesion.objects.filter(
+        tratamiento=sesion.tratamiento,
+        estado='completada',
+        numero_sesion__lt=sesion.numero_sesion
+    ).order_by('-numero_sesion')[:3]  # Últimas 3 evoluciones
+    
+    # Obtener medicamentos disponibles para prescripción
+    from .models import Medicamento
+    medicamentos_disponibles = Medicamento.objects.filter(
+        activo=True,
+        stock_actual__gt=0
+    ).order_by('nombre_comercial')
+    
+    # Obtener recetas anteriores del paciente
+    recetas_anteriores = []
+    if sesion.tratamiento.paciente:
+        from .models import RecetaMedica
+        recetas_anteriores = RecetaMedica.objects.filter(
+            paciente=sesion.tratamiento.paciente,
+            estado='dispensada'
+        ).order_by('-fecha_dispensacion')[:3]
+    
+    context = {
+        'sesion': sesion,
+        'tratamiento': sesion.tratamiento,
+        'cita': sesion.cita,
+        'evoluciones_anteriores': evoluciones_anteriores,
+        'paciente': sesion.tratamiento.paciente,
+        'medico': sesion.tratamiento.medico,
+        'medicamentos_disponibles': medicamentos_disponibles,
+        'recetas_anteriores': recetas_anteriores,
+    }
+    
+    return render(request, 'medico/atender_sesion_seguimiento.html', context)

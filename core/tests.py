@@ -1,3 +1,1 @@
-from django.test import TestCase
-
-# Create your tests here.
+# Las pruebas ahora están en la carpeta tests/

@@ -1,0 +1,388 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Ajuste de Inventario - CitaMe{% endblock %}
+
+{% block page_title %}Ajuste de Inventario{% endblock %}
+
+{% block sidebar_menu %}
+<a href="{% url 'dashboard_farmacia' %}" class="menu-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+<a href="{% url 'recetas_pendientes' %}" class="menu-item"><i class="fas fa-prescription"></i> Recetas Pendientes</a>
+
+<!-- Menú expandible de Inventario -->
+<div class="menu-item dropdown-menu-item">
+    <a href="#" class="menu-item-toggle active"><i class="fas fa-boxes"></i> Inventario <i class="fas fa-chevron-down"></i></a>
+    <div class="submenu active">
+        <a href="{% url 'inventario_medicamentos' %}" class="submenu-item"><i class="fas fa-pills"></i> Ver Inventario</a>
+        <a href="{% url 'entrada_medicamentos' %}" class="submenu-item"><i class="fas fa-plus-circle"></i> Entrada de Medicamentos</a>
+        <a href="{% url 'ajuste_inventario' %}" class="submenu-item active"><i class="fas fa-adjust"></i> Ajuste de Stock</a>
+        <a href="{% url 'historial_movimientos' %}" class="submenu-item"><i class="fas fa-history"></i> Historial de Movimientos</a>
+        <a href="{% url 'reporte_inventario' %}" class="submenu-item"><i class="fas fa-chart-bar"></i> Reporte de Inventario</a>
+    </div>
+</div>
+
+<a href="{% url 'alertas_farmacia' %}" class="menu-item"><i class="fas fa-exclamation-triangle"></i> Alertas</a>
+<a href="{% url 'perfil_admin' %}" class="menu-item"><i class="fas fa-user"></i> Mi Perfil</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-control, .form-select {
+        border-radius: 10px;
+        border: 1px solid #e3e6f0;
+        padding: 0.75rem 1rem;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    .btn-custom {
+        border-radius: 25px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+
+    .btn-primary-custom {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+    }
+
+    .btn-primary-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .header-card {
+        background: linear-gradient(135deg, #ffa726 0%, #ff7043 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .required {
+        color: #e74c3c;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .alert {
+        border-radius: 10px;
+        border: none;
+    }
+
+    .type-selector {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .type-option {
+        padding: 1rem;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .type-option:hover {
+        border-color: #667eea;
+        background-color: #f8f9fa;
+    }
+
+    .type-option.selected {
+        border-color: #667eea;
+        background-color: #e3f2fd;
+    }
+
+    .type-option.positive {
+        border-color: #4caf50;
+        background-color: #e8f5e8;
+    }
+
+    .type-option.negative {
+        border-color: #f44336;
+        background-color: #ffebee;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="header-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="mb-0">Realiza ajustes positivos o negativos al inventario</p>
+                    </div>
+                    <a href="{% url 'inventario_medicamentos' %}" class="btn btn-light btn-custom">
+                        <i class="fas fa-arrow-left"></i> Volver al Inventario
+                    </a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body p-4">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="medicamento_id" class="form-label">
+                                        Medicamento <span class="required">*</span>
+                                    </label>
+                                    <select class="form-select" name="medicamento_id" id="medicamento_id" required>
+                                        <option value="">Seleccionar medicamento...</option>
+                                        {% for medicamento in medicamentos %}
+                                            <option value="{{ medicamento.id }}" 
+                                                    data-stock="{{ medicamento.stock_actual }}"
+                                                    data-minimo="{{ medicamento.stock_minimo }}">
+                                                {{ medicamento.nombre_comercial }} - {{ medicamento.codigo }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">
+                                        Tipo de Ajuste <span class="required">*</span>
+                                    </label>
+                                    
+                                    <div class="type-selector">
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <div class="type-option positive" data-type="positivo">
+                                                    <input type="radio" name="tipo_ajuste" value="positivo" id="positivo" required>
+                                                    <label for="positivo" class="form-label mb-0">
+                                                        <i class="fas fa-plus-circle text-success"></i>
+                                                        <strong>Ajuste Positivo</strong>
+                                                        <small class="d-block text-muted">Aumentar stock</small>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="type-option negative" data-type="negativo">
+                                                    <input type="radio" name="tipo_ajuste" value="negativo" id="negativo" required>
+                                                    <label for="negativo" class="form-label mb-0">
+                                                        <i class="fas fa-minus-circle text-danger"></i>
+                                                        <strong>Ajuste Negativo</strong>
+                                                        <small class="d-block text-muted">Disminuir stock</small>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="cantidad" class="form-label">
+                                        Cantidad <span class="required">*</span>
+                                    </label>
+                                    <input type="number" class="form-control" name="cantidad" id="cantidad" 
+                                           min="1" required placeholder="Ingresa la cantidad">
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="motivo" class="form-label">
+                                        Motivo <span class="required">*</span>
+                                    </label>
+                                    <select class="form-select" name="motivo" id="motivo_select">
+                                        <option value="">Seleccionar motivo...</option>
+                                        <option value="Conteo físico - diferencia encontrada">Conteo físico - diferencia</option>
+                                        <option value="Medicamento vencido - retirado del inventario">Medicamento vencido</option>
+                                        <option value="Medicamento dañado - retirado del inventario">Medicamento dañado</option>
+                                        <option value="Error de registro anterior">Error de registro anterior</option>
+                                        <option value="Devolución de proveedor">Devolución de proveedor</option>
+                                        <option value="Otros">Otros</option>
+                                    </select>
+                                    <input type="text" class="form-control mt-2" name="motivo" id="motivo_texto" 
+                                           placeholder="Describe el motivo del ajuste" style="display: none;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Información del medicamento seleccionado -->
+                        <div id="medicamento-info" class="alert alert-info" style="display: none;">
+                            <h6><i class="fas fa-info-circle"></i> Información del Medicamento</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <p class="mb-1"><strong>Stock Actual:</strong> <span id="stock-actual">-</span> unidades</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <p class="mb-1"><strong>Stock Mínimo:</strong> <span id="stock-minimo">-</span> unidades</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <p class="mb-1"><strong>Estado:</strong> <span id="estado-stock">-</span></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Preview del ajuste -->
+                        <div id="preview-ajuste" class="alert" style="display: none;">
+                            <h6><i class="fas fa-calculator"></i> Preview del Ajuste</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Stock Actual:</strong> <span id="preview-stock-actual">-</span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Stock Después del Ajuste:</strong> <span id="preview-stock-nuevo">-</span></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary-custom btn-lg">
+                                <i class="fas fa-save"></i> Realizar Ajuste
+                            </button>
+                            <a href="{% url 'inventario_medicamentos' %}" class="btn btn-secondary btn-lg ms-3">
+                                <i class="fas fa-times"></i> Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const medicamentoSelect = document.getElementById('medicamento_id');
+    const motivoSelect = document.getElementById('motivo_select');
+    const motivoTexto = document.getElementById('motivo_texto');
+    const cantidadInput = document.getElementById('cantidad');
+    const medicamentoInfo = document.getElementById('medicamento-info');
+    const previewAjuste = document.getElementById('preview-ajuste');
+    const stockActual = document.getElementById('stock-actual');
+    const stockMinimo = document.getElementById('stock-minimo');
+    const estadoStock = document.getElementById('estado-stock');
+    const tipoOptions = document.querySelectorAll('.type-option');
+    
+    let currentStock = 0;
+    let currentMinimo = 0;
+    
+    // Manejo de selección de medicamento
+    medicamentoSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        
+        if (selectedOption.value) {
+            currentStock = parseInt(selectedOption.getAttribute('data-stock'));
+            currentMinimo = parseInt(selectedOption.getAttribute('data-minimo'));
+            
+            stockActual.textContent = currentStock;
+            stockMinimo.textContent = currentMinimo;
+            
+            // Determinar estado del stock
+            if (currentStock <= currentMinimo) {
+                estadoStock.innerHTML = '<span class="badge bg-danger">Crítico</span>';
+            } else if (currentStock <= currentMinimo * 2) {
+                estadoStock.innerHTML = '<span class="badge bg-warning">Bajo</span>';
+            } else {
+                estadoStock.innerHTML = '<span class="badge bg-success">Normal</span>';
+            }
+            
+            medicamentoInfo.style.display = 'block';
+            updatePreview();
+        } else {
+            medicamentoInfo.style.display = 'none';
+            previewAjuste.style.display = 'none';
+        }
+    });
+    
+    // Manejo de motivo
+    motivoSelect.addEventListener('change', function() {
+        if (this.value === 'Otros') {
+            motivoTexto.style.display = 'block';
+            motivoTexto.required = true;
+            motivoSelect.name = '';
+        } else {
+            motivoTexto.style.display = 'none';
+            motivoTexto.required = false;
+            motivoSelect.name = 'motivo';
+        }
+    });
+    
+    // Manejo de tipos de ajuste
+    tipoOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            const radio = this.querySelector('input[type="radio"]');
+            radio.checked = true;
+            
+            tipoOptions.forEach(opt => opt.classList.remove('selected'));
+            this.classList.add('selected');
+            
+            updatePreview();
+        });
+    });
+    
+    // Actualizar preview cuando cambie la cantidad
+    cantidadInput.addEventListener('input', updatePreview);
+    
+    function updatePreview() {
+        const cantidad = parseInt(cantidadInput.value) || 0;
+        const tipoAjuste = document.querySelector('input[name="tipo_ajuste"]:checked');
+        
+        if (medicamentoSelect.value && cantidad > 0 && tipoAjuste) {
+            let nuevoStock;
+            
+            if (tipoAjuste.value === 'positivo') {
+                nuevoStock = currentStock + cantidad;
+                previewAjuste.className = 'alert alert-success';
+            } else {
+                nuevoStock = currentStock - cantidad;
+                if (nuevoStock < 0) {
+                    previewAjuste.className = 'alert alert-danger';
+                } else {
+                    previewAjuste.className = 'alert alert-warning';
+                }
+            }
+            
+            document.getElementById('preview-stock-actual').textContent = currentStock;
+            document.getElementById('preview-stock-nuevo').textContent = nuevoStock;
+            
+            previewAjuste.style.display = 'block';
+        } else {
+            previewAjuste.style.display = 'none';
+        }
+    }
+    
+    // Validación del formulario
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const tipoAjuste = document.querySelector('input[name="tipo_ajuste"]:checked');
+        const cantidad = parseInt(cantidadInput.value) || 0;
+        
+        if (tipoAjuste && tipoAjuste.value === 'negativo' && cantidad > currentStock) {
+            e.preventDefault();
+            alert('No puedes realizar un ajuste negativo mayor al stock actual');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %} 
