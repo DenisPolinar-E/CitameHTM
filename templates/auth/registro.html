@@ -8,224 +8,210 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/registro.css' %}">
 <style>
-    .registro-title {
-        font-size: 1.8rem;
-        font-weight: 800;
-        color: var(--primary-color);
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        margin-bottom: 0.7em;
+.registro-full-wrapper {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+    min-height: 600px;
+    background: transparent;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+.registro-full-img {
+    flex: 0 0 35%;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    color: #fff;
+    height: 100vh;
+    min-width: 0;
+}
+.registro-full-img .img-content {
+    width: 80%;
+    max-width: 350px;
+    min-height: 200px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 32px;
+}
+.registro-full-img .img-content img {
+    width: 100%;
+    max-width: 220px;
+    object-fit: contain;
+}
+.registro-full-img .img-text {
+    font-size: 2rem;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.3;
+}
+.registro-full-formulario {
+    flex: 0 0 65%;
+    background: #fff;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 2rem 1.5rem 2rem 1.5rem;
+    min-width: 0;
+    box-shadow: -8px 0 32px -12px rgba(0,0,0,0.10);
+    overflow-y: auto;
+}
+.registro-full-formulario form {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+}
+@media (max-width: 900px) {
+    .registro-full-wrapper {
+        flex-direction: column;
+        height: auto;
+        min-height: 100vh;
     }
-    .registro-form {
-        max-width: 600px;
-        margin: 0 auto;
-        background: #fff;
-        border-radius: 24px;
-        box-shadow: var(--shadow-2xl);
-        padding: 2.5rem 2rem 2rem 2rem;
-        position: relative;
-        z-index: 1;
+    .registro-full-img, .registro-full-formulario {
+        min-width: 0;
+        max-width: 100vw;
+        height: auto;
+        padding: 2rem 1rem;
     }
-    .form-section {
-        background: var(--gray-50);
-        border-radius: 16px;
-        box-shadow: var(--shadow-sm);
-        padding: 2.2rem 2rem 1.5rem 2rem;
-        margin-bottom: 2.5rem;
-        border: 1px solid var(--gray-200);
+    .registro-full-img .img-content {
+        min-height: 120px;
     }
-    .form-section-title {
-        font-size: 1.15rem;
-        font-weight: 700;
-        color: var(--primary-color);
-        margin-bottom: 1.5rem;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-    .btn-auth {
-        width: 100%;
-        font-size: 1.2rem;
-        padding: 1.2rem 0;
-        margin-top: 0.7rem;
-    }
-    .auth-links {
-        margin-top: 2.5rem;
-    }
-    .form-label {
-        font-weight: 600;
-        color: var(--gray-700);
-        margin-bottom: 0.4rem;
-        font-size: 1rem;
-    }
-    .form-control, .form-select {
-        min-height: 44px;
-        font-size: 1rem;
-        border-radius: 10px;
-        border: 1.5px solid var(--gray-200);
-        box-shadow: none;
-        transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .form-control:focus, .form-select:focus {
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 2px var(--primary-light);
-    }
-    .form-check-input {
-        width: 1.3em;
-        height: 1.3em;
-        border-radius: 6px;
-        border: 2px solid var(--gray-300);
-        margin-top: 0.2em;
-    }
-    .form-check-label {
-        font-size: 1.08rem;
-        color: var(--gray-600);
-        padding-left: 0.5em;
-    }
-    .modal-content {
-        border-radius: 18px;
-    }
-    .row.g-3 > [class^='col-'], .row.g-3 > [class*=' col-'] {
-        padding-right: 18px;
-        padding-left: 18px;
-    }
-    @media (max-width: 900px) {
-        .registro-form {
-            max-width: 98vw;
-            padding: 1.5rem 0.5rem;
-        }
-        .form-section {
-            padding: 1.2rem 0.5rem;
-        }
-    }
-    @media (max-width: 600px) {
-        .registro-form {
-            padding: 1.2rem 0.2rem;
-        }
-        .form-section {
-            padding: 1rem 0.2rem;
-        }
-        .row.g-3 > [class^='col-'], .row.g-3 > [class*=' col-'] {
-            padding-right: 6px;
-            padding-left: 6px;
-        }
-    }
+}
 </style>
 {% endblock %}
 
 {% block auth_content %}
-<form method="post" action="{% url 'registro' %}">
-    {% csrf_token %}
-    <!-- Información Personal -->
-    <div class="form-section">
-        <h4 class="form-section-title"><i class="fas fa-user"></i> Información Personal</h4>
-        <div class="row g-3">
-            <div class="col-md-6 field-group">
-                <label for="nombres" class="form-label"><i class="fas fa-signature"></i> Nombres</label>
-                <input type="text" class="form-control" id="nombres" name="nombres" placeholder="Ingrese sus nombres" required>
-            </div>
-            <div class="col-md-6 field-group">
-                <label for="apellidos" class="form-label"><i class="fas fa-signature"></i> Apellidos</label>
-                <input type="text" class="form-control" id="apellidos" name="apellidos" placeholder="Ingrese sus apellidos" required>
-            </div>
+<div class="registro-full-wrapper">
+    <div class="registro-full-img">
+        <div class="img-content">
+            <img src="https://cdn-icons-png.flaticon.com/512/2966/2966484.png" alt="Registro Hospital" />
         </div>
-        <div class="row g-3 mt-2">
-            <div class="col-md-6 field-group">
-                <label for="dni" class="form-label"><i class="fas fa-id-card"></i> DNI</label>
-                <input type="text" class="form-control" id="dni" name="dni" placeholder="Ingrese su DNI (8 dígitos)" maxlength="8" required>
-                <div class="form-text">Su DNI será su nombre de usuario para iniciar sesión</div>
-            </div>
-            <div class="col-md-6 field-group">
-                <label for="fecha_nacimiento" class="form-label"><i class="fas fa-calendar-alt"></i> Fecha de Nacimiento</label>
-                <input type="date" class="form-control" id="fecha_nacimiento" name="fecha_nacimiento" required>
-            </div>
-        </div>
-        <div class="row g-3 mt-2">
-            <div class="col-md-6 field-group">
-                <label for="sexo" class="form-label"><i class="fas fa-venus-mars"></i> Sexo</label>
-                <select class="form-select" id="sexo" name="sexo" required>
-                    <option value="" selected disabled>Seleccione una opción</option>
-                    <option value="M">Masculino</option>
-                    <option value="F">Femenino</option>
-                    <option value="O">Otro</option>
-                </select>
-            </div>
-            <div class="col-md-6 field-group">
-                <label for="rol" class="form-label"><i class="fas fa-user-tag"></i> Rol en el Sistema</label>
-                <select class="form-select" id="rol" name="rol" required>
-                    <option value="" selected disabled>Seleccione un rol</option>
-                    <option value="Paciente">Paciente</option>
-                    <option value="Medico">Médico</option>
-                    <option value="Admision">Admisión</option>
-                    <option value="Administrador">Administrador</option>
-                </select>
-            </div>
+        <div class="img-text">
+            ¡Bienvenido!<br>Regístrate y gestiona tus citas<br>en el Hospital de Tingo María
         </div>
     </div>
-    <!-- Especialidad Médica (visible solo cuando se selecciona Médico) -->
-    <div class="form-section" id="especialidadContainer" style="display: none;">
-        <h4 class="form-section-title"><i class="fas fa-stethoscope"></i> Especialidad Médica</h4>
-        <div class="row g-3">
-            <div class="col-12 field-group">
-                <label for="especialidad" class="form-label"><i class="fas fa-hospital"></i> Especialidad</label>
-                <select class="form-select" id="especialidad" name="especialidad">
-                    <option value="" selected disabled>Seleccione una especialidad</option>
-                    {% for especialidad in especialidades %}
-                    <option value="{{ especialidad.id }}">{{ especialidad.nombre }}</option>
-                    {% endfor %}
-                </select>
-                <div class="form-text">Seleccione la especialidad médica a la que pertenece</div>
+    <div class="registro-full-formulario">
+        <form method="post" action="{% url 'registro' %}">
+            {% csrf_token %}
+            <!-- Información Personal -->
+            <div class="form-section">
+                <h4 class="form-section-title"><i class="fas fa-user"></i> Información Personal</h4>
+                <div class="row g-3">
+                    <div class="col-md-6 field-group">
+                        <label for="nombres" class="form-label"><i class="fas fa-signature"></i> Nombres</label>
+                        <input type="text" class="form-control" id="nombres" name="nombres" placeholder="Ingrese sus nombres" required>
+                    </div>
+                    <div class="col-md-6 field-group">
+                        <label for="apellidos" class="form-label"><i class="fas fa-signature"></i> Apellidos</label>
+                        <input type="text" class="form-control" id="apellidos" name="apellidos" placeholder="Ingrese sus apellidos" required>
+                    </div>
+                </div>
+                <div class="row g-3 mt-2">
+                    <div class="col-md-6 field-group">
+                        <label for="dni" class="form-label"><i class="fas fa-id-card"></i> DNI</label>
+                        <input type="text" class="form-control" id="dni" name="dni" placeholder="Ingrese su DNI (8 dígitos)" maxlength="8" required>
+                        <div class="form-text">Su DNI será su nombre de usuario para iniciar sesión</div>
+                    </div>
+                    <div class="col-md-6 field-group">
+                        <label for="fecha_nacimiento" class="form-label"><i class="fas fa-calendar-alt"></i> Fecha de Nacimiento</label>
+                        <input type="date" class="form-control" id="fecha_nacimiento" name="fecha_nacimiento" required>
+                    </div>
+                </div>
+                <div class="row g-3 mt-2">
+                    <div class="col-md-6 field-group">
+                        <label for="sexo" class="form-label"><i class="fas fa-venus-mars"></i> Sexo</label>
+                        <select class="form-select" id="sexo" name="sexo" required>
+                            <option value="" selected disabled>Seleccione una opción</option>
+                            <option value="M">Masculino</option>
+                            <option value="F">Femenino</option>
+                            <option value="O">Otro</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 field-group">
+                        <label for="rol" class="form-label"><i class="fas fa-user-tag"></i> Rol en el Sistema</label>
+                        <select class="form-select" id="rol" name="rol" required>
+                            <option value="" selected disabled>Seleccione un rol</option>
+                            <option value="Paciente">Paciente</option>
+                            <option value="Medico">Médico</option>
+                            <option value="Admision">Admisión</option>
+                            <option value="Administrador">Administrador</option>
+                        </select>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
-    <!-- Información de Contacto -->
-    <div class="form-section">
-        <h4 class="form-section-title"><i class="fas fa-address-book"></i> Información de Contacto</h4>
-        <div class="mb-3 field-group">
-            <label for="email" class="form-label"><i class="fas fa-envelope"></i> Correo Electrónico</label>
-            <input type="email" class="form-control" id="email" name="email" placeholder="ejemplo@correo.com" required>
-        </div>
-        <div class="mb-3 field-group">
-            <label for="telefono" class="form-label"><i class="fas fa-phone"></i> Teléfono</label>
-            <input type="tel" class="form-control" id="telefono" name="telefono" placeholder="Ingrese su número telefónico" required>
-        </div>
-        <div class="mb-3 field-group">
-            <label for="direccion" class="form-label"><i class="fas fa-map-marker-alt"></i> Dirección</label>
-            <textarea class="form-control" id="direccion" name="direccion" rows="2" placeholder="Ingrese su dirección completa" required></textarea>
-        </div>
-    </div>
-    <!-- Seguridad -->
-    <div class="form-section">
-        <h4 class="form-section-title"><i class="fas fa-lock"></i> Seguridad</h4>
-        <div class="row g-3">
-            <div class="col-md-6 field-group">
-                <label for="password" class="form-label"><i class="fas fa-key"></i> Contraseña</label>
-                <input type="password" class="form-control" id="password" name="password" placeholder="Ingrese su contraseña" required>
-                <div class="form-text">Use al menos 8 caracteres con letras y números</div>
+            <!-- Especialidad Médica (visible solo cuando se selecciona Médico) -->
+            <div class="form-section" id="especialidadContainer" style="display: none;">
+                <h4 class="form-section-title"><i class="fas fa-stethoscope"></i> Especialidad Médica</h4>
+                <div class="row g-3">
+                    <div class="col-12 field-group">
+                        <label for="especialidad" class="form-label"><i class="fas fa-hospital"></i> Especialidad</label>
+                        <select class="form-select" id="especialidad" name="especialidad">
+                            <option value="" selected disabled>Seleccione una especialidad</option>
+                            {% for especialidad in especialidades %}
+                            <option value="{{ especialidad.id }}">{{ especialidad.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Seleccione la especialidad médica a la que pertenece</div>
+                    </div>
+                </div>
             </div>
-            <div class="col-md-6 field-group">
-                <label for="password2" class="form-label"><i class="fas fa-key"></i> Confirmar Contraseña</label>
-                <input type="password" class="form-control" id="password2" name="password2" placeholder="Confirme su contraseña" required>
+            <!-- Información de Contacto -->
+            <div class="form-section">
+                <h4 class="form-section-title"><i class="fas fa-address-book"></i> Información de Contacto</h4>
+                <div class="mb-3 field-group">
+                    <label for="email" class="form-label"><i class="fas fa-envelope"></i> Correo Electrónico</label>
+                    <input type="email" class="form-control" id="email" name="email" placeholder="ejemplo@correo.com" required>
+                </div>
+                <div class="mb-3 field-group">
+                    <label for="telefono" class="form-label"><i class="fas fa-phone"></i> Teléfono</label>
+                    <input type="tel" class="form-control" id="telefono" name="telefono" placeholder="Ingrese su número telefónico" required>
+                </div>
+                <div class="mb-3 field-group">
+                    <label for="direccion" class="form-label"><i class="fas fa-map-marker-alt"></i> Dirección</label>
+                    <textarea class="form-control" id="direccion" name="direccion" rows="2" placeholder="Ingrese su dirección completa" required></textarea>
+                </div>
             </div>
-        </div>
+            <!-- Seguridad -->
+            <div class="form-section">
+                <h4 class="form-section-title"><i class="fas fa-lock"></i> Seguridad</h4>
+                <div class="row g-3">
+                    <div class="col-md-6 field-group">
+                        <label for="password" class="form-label"><i class="fas fa-key"></i> Contraseña</label>
+                        <input type="password" class="form-control" id="password" name="password" placeholder="Ingrese su contraseña" required>
+                        <div class="form-text">Use al menos 8 caracteres con letras y números</div>
+                    </div>
+                    <div class="col-md-6 field-group">
+                        <label for="password2" class="form-label"><i class="fas fa-key"></i> Confirmar Contraseña</label>
+                        <input type="password" class="form-control" id="password2" name="password2" placeholder="Confirme su contraseña" required>
+                    </div>
+                </div>
+            </div>
+            <!-- Términos y Condiciones -->
+            <div class="mb-4 form-check d-flex align-items-center">
+                <input type="checkbox" class="form-check-input" id="terminos" name="terminos" required>
+                <label class="form-check-label ms-2" for="terminos">
+                    Acepto los <a href="#" data-bs-toggle="modal" data-bs-target="#terminosModal">términos y condiciones</a>
+                </label>
+            </div>
+            <button type="submit" class="btn btn-auth">
+                <i class="fas fa-user-plus me-2"></i>Registrarse
+            </button>
+            <div class="auth-links text-center">
+                <p class="mt-3 mb-0">
+                    ¿Ya tienes una cuenta? <a href="{% url 'login' %}">Inicia sesión aquí</a>
+                </p>
+            </div>
+        </form>
     </div>
-    <!-- Términos y Condiciones -->
-    <div class="mb-4 form-check d-flex align-items-center">
-        <input type="checkbox" class="form-check-input" id="terminos" name="terminos" required>
-        <label class="form-check-label ms-2" for="terminos">
-            Acepto los <a href="#" data-bs-toggle="modal" data-bs-target="#terminosModal">términos y condiciones</a>
-        </label>
-    </div>
-    <button type="submit" class="btn btn-auth">
-        <i class="fas fa-user-plus me-2"></i>Registrarme
-    </button>
-    <div class="auth-links text-center">
-        <p class="mt-3 mb-0">
-            ¿Ya tienes una cuenta? <a href="{% url 'login' %}">Inicia sesión aquí</a>
-        </p>
-    </div>
-</form>
+</div>
 <!-- Modal de Términos y Condiciones -->
 <div class="modal fade" id="terminosModal" tabindex="-1" aria-labelledby="terminosModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable">
