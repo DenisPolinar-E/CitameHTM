@@ -1,1 +1,32 @@
-*.pyc\n__pycache__/\ndb.sqlite3\n.env\n.vscode/\nmedia/\nstatic/
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.log
+*.sqlite3
+*.db
+
+# Virtualenv
+#venv/
+#ENV/
+
+# VSCode settings
+.vscode/
+
+# Env files
+#.env
+#.env.*
+
+# Django media/static/temp files
+media/
+staticfiles/
+*.pot
+*.mo
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Node (si no lo usas, borra package-lock.json también)
+node_modules/
