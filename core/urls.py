@@ -192,5 +192,6 @@ urlpatterns = [
     # Las siguientes líneas fueron comentadas porque los métodos no existen
     # path('api/derivaciones/estadisticas/', api_views.api_derivaciones, name='api_derivaciones'),
     # path('api/citas/distribucion/', api_views.api_distribucion_citas, name='api_distribucion_citas'),
-    # path('api/asistencia/tasas/', api_views.api_tasas_asistencia, name='api_tasas_asistencia')
+    # path('api/asistencia/tasas/', api_views.api_tasas_asistencia, name='api_tasas_asistencia'),
+    path('administrador/reportes-farmacia/consumo-medicamentos/', views.admin_reporte_consumo_medicamentos, name='admin_reporte_consumo_medicamentos')
 ]

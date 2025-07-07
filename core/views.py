@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Sum
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -13,6 +13,9 @@ from .models import *
 from .forms import *
 import json
 from datetime import datetime, timedelta
+from django.db.models import Sum
+from core.models import DetalleReceta, Medicamento
+from django.contrib.auth.models import Group
 
 # Vistas pÃºblicas
 def home(request):
@@ -1714,4 +1717,38 @@ def api_tasas_asistencia(request):
                 'recuperacion': []
             }
         }, status=200)  # Usar 200 para que el frontend pueda mostrar el mensaje de error
+
+def reporte_consumo_medicamentos(request):
+    if not request.user.is_authenticated or not user_is_admin(request.user):
+        return render(request, '403.html')
+    filtro = request.GET.get('filtro', 'mes')
+    periodo = request.GET.get('periodo')
+    hoy = datetime.now()
+    qs = DetalleReceta.objects.select_related('medicamento', 'receta')
+    if filtro == 'mes' and periodo:
+        anio, mes = map(int, periodo.split('-'))
+        qs = qs.filter(receta__fecha_prescripcion__year=anio, receta__fecha_prescripcion__month=mes)
+    elif filtro == 'trimestre' and periodo:
+        anio, trimestre = map(int, periodo.split('-'))
+        meses = [(1,3), (4,6), (7,9), (10,12)][int(trimestre)-1]
+        qs = qs.filter(receta__fecha_prescripcion__year=anio, receta__fecha_prescripcion__month__gte=meses[0], receta__fecha_prescripcion__month__lte=meses[1])
+    elif filtro == 'anio' and periodo:
+        anio = int(periodo)
+        qs = qs.filter(receta__fecha_prescripcion__year=anio)
+    top = (qs.values('medicamento__nombre_comercial')
+             .annotate(total=Sum('cantidad_prescrita'))
+             .order_by('-total')[:10])
+    labels = [x['medicamento__nombre_comercial'] for x in top]
+    data = [x['total'] for x in top]
+    return JsonResponse({'labels': labels, 'data': data})
+
+def admin_reporte_consumo_medicamentos(request):
+    if not request.user.is_authenticated or not user_is_admin(request.user):
+        return render(request, '403.html')
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('filtro'):
+        return reporte_consumo_medicamentos(request)
+    return render(request, 'admin/reportes_farmacia_consumo.html', {'now': timezone.now()})
+
+def user_is_admin(user):
+    return user.is_superuser or (hasattr(user, 'rol') and user.rol and user.rol.nombre == 'Administrador')
 
