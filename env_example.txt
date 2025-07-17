@@ -1,10 +1,25 @@
-# Configuración de la base de datos PostgreSQL
-DB_NAME=CitaMe
+# Django Settings
+SECRET_KEY=your-secret-key-here
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1
+
+# Database Settings
+DB_NAME=citame
 DB_USER=postgres
-DB_PASSWORD=denis
-DB_HOST=127.0.0.1
+DB_PASSWORD=your-password
+DB_HOST=localhost
 DB_PORT=5432
 
-# Configuración de Django
-SECRET_KEY=django-insecure-4j*!#jd6w_g6&%ii@k2d=4+26&qda*q1q@&df5uji&v@7-_&8i
-DEBUG=True 
+# Email Settings
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=your-email@gmail.com
+EMAIL_HOST_PASSWORD=your-app-password
+
+# Static Files
+STATIC_ROOT=/path/to/static/files
+MEDIA_ROOT=/path/to/media/files
+
+# Security Settings
+CORS_ALLOWED_ORIGINS=http://localhost:8000,http://127.0.0.1:8000 
