@@ -5,41 +5,233 @@
 {% block auth_title %}Iniciar Sesión{% endblock %}
 
 {% block auth_content %}
-<form method="post" action="{% url 'login' %}">
+<form method="post" action="{% url 'login' %}" class="login-form">
     {% csrf_token %}
     
-    <div class="mb-3">
-        <label for="dni" class="form-label">DNI</label>
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                <i class="fas fa-{% if message.tags == 'error' %}exclamation-triangle{% elif message.tags == 'success' %}check-circle{% else %}info-circle{% endif %} me-2"></i>
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div class="field-group mb-4">
+        <label for="dni" class="form-label">
+            <i class="fas fa-id-card"></i>DNI
+        </label>
         <div class="input-group">
-            <span class="input-group-text"><i class="fas fa-id-card"></i></span>
-            <input type="text" class="form-control" id="dni" name="dni" placeholder="Ingrese su DNI" required autofocus>
+            <span class="input-group-text">
+                <i class="fas fa-id-card"></i>
+            </span>
+            <input type="text" class="form-control" id="dni" name="dni" 
+                   placeholder="Ingrese su DNI" required autofocus 
+                   pattern="[0-9]{8}" title="El DNI debe tener 8 dígitos">
+        </div>
+        <div class="form-text">Ingrese su número de documento de identidad</div>
+    </div>
+    
+    <div class="field-group mb-4">
+        <label for="password" class="form-label">
+            <i class="fas fa-lock"></i>Contraseña
+        </label>
+        <div class="input-group">
+            <span class="input-group-text">
+                <i class="fas fa-lock"></i>
+            </span>
+            <input type="password" class="form-control" id="password" name="password" 
+                   placeholder="Ingrese su contraseña" required>
+        </div>
+        <div class="form-text">Ingrese su contraseña de acceso</div>
+    </div>
+    
+    <div class="field-group mb-4">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="remember" name="remember">
+            <label class="form-check-label" for="remember">
+                <i class="fas fa-clock me-1"></i>Recordar sesión
+            </label>
         </div>
     </div>
     
-    <div class="mb-3">
-        <label for="password" class="form-label">Contraseña</label>
-        <div class="input-group">
-            <span class="input-group-text"><i class="fas fa-lock"></i></span>
-            <input type="password" class="form-control" id="password" name="password" placeholder="Ingrese su contraseña" required>
-        </div>
-    </div>
-    
-    <div class="mb-3 form-check">
-        <input type="checkbox" class="form-check-input" id="remember" name="remember">
-        <label class="form-check-label" for="remember">Recordar sesión</label>
-    </div>
-    
-    <div class="d-grid gap-2">
+    <div class="field-group mb-4">
         <button type="submit" class="btn btn-auth">
-            <i class="fas fa-sign-in-alt me-2"></i>Ingresar
+            <i class="fas fa-sign-in-alt me-2"></i>Ingresar al Sistema
         </button>
     </div>
     
-    <div class="auth-links mt-4">
-        <p><a href="#"><i class="fas fa-key me-1"></i>¿Olvidaste tu contraseña?</a></p>
-        <p>¿No tienes una cuenta? <a href="{% url 'registro' %}">Regístrate aquí</a></p>
+    <div class="auth-links">
+        <p class="mb-2">
+            <a href="#" class="forgot-password-link">
+                <i class="fas fa-key me-1"></i>¿Olvidaste tu contraseña?
+            </a>
+        </p>
+        <p class="mb-0">
+            ¿No tienes una cuenta? 
+            <a href="{% url 'registro' %}" class="register-link">
+                <i class="fas fa-user-plus me-1"></i>Regístrate aquí
+            </a>
+        </p>
     </div>
 </form>
+
+<style>
+.login-form {
+    animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.field-group {
+    animation: slideInRight 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.field-group:nth-child(1) { animation-delay: 0.1s; }
+.field-group:nth-child(2) { animation-delay: 0.2s; }
+.field-group:nth-child(3) { animation-delay: 0.3s; }
+.field-group:nth-child(4) { animation-delay: 0.4s; }
+.field-group:nth-child(5) { animation-delay: 0.5s; }
+
+@keyframes fadeInUp {
+    from { 
+        opacity: 0; 
+        transform: translateY(20px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+@keyframes slideInRight {
+    from { 
+        opacity: 0; 
+        transform: translateX(20px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateX(0); 
+    }
+}
+
+.form-text {
+    color: var(--gray-500);
+    font-size: 0.9rem;
+    margin-top: 8px;
+    font-weight: 500;
+    transition: var(--transition-fast);
+}
+
+.forgot-password-link, .register-link {
+    color: var(--primary-color);
+    font-weight: 600;
+    text-decoration: none;
+    transition: var(--transition-normal);
+    position: relative;
+    padding: 4px 8px;
+    border-radius: 8px;
+}
+
+.forgot-password-link::before, .register-link::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: var(--primary-gradient);
+    transition: var(--transition-normal);
+    transform: translateX(-50%);
+}
+
+.forgot-password-link:hover, .register-link:hover {
+    color: var(--primary-dark);
+    background: rgba(37, 99, 235, 0.05);
+    transform: translateY(-1px);
+}
+
+.forgot-password-link:hover::before, .register-link:hover::before {
+    width: 80%;
+}
+
+/* Validación visual */
+.form-control:valid {
+    border-color: var(--success-color);
+    box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.1);
+}
+
+.form-control:invalid:not(:placeholder-shown) {
+    border-color: var(--danger-color);
+    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.1);
+}
+
+/* Efecto de carga en el botón */
+.btn-auth.loading {
+    position: relative;
+    color: transparent;
+}
+
+.btn-auth.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid transparent;
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('.login-form');
+    const submitBtn = document.querySelector('.btn-auth');
+    
+    // Validación en tiempo real del DNI
+    const dniInput = document.getElementById('dni');
+    dniInput.addEventListener('input', function(e) {
+        const dni = e.target.value.replace(/\D/g, '');
+        e.target.value = dni;
+        
+        if (dni.length === 8) {
+            e.target.classList.remove('is-invalid');
+            e.target.classList.add('is-valid');
+        } else if (dni.length > 0) {
+            e.target.classList.remove('is-valid');
+            e.target.classList.add('is-invalid');
+        } else {
+            e.target.classList.remove('is-valid', 'is-invalid');
+        }
+    });
+    
+    // Efecto de carga en el botón
+    form.addEventListener('submit', function() {
+        submitBtn.classList.add('loading');
+        submitBtn.disabled = true;
+    });
+    
+    // Animación de los campos al hacer focus
+    const inputs = document.querySelectorAll('.form-control');
+    inputs.forEach(input => {
+        input.addEventListener('focus', function() {
+            this.closest('.field-group').classList.add('focused');
+        });
+        
+        input.addEventListener('blur', function() {
+            this.closest('.field-group').classList.remove('focused');
+        });
+    });
+});
+</script>
 {% endblock %}
 
 {% block auth_footer %}
